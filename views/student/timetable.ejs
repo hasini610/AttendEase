@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">My Class Timetable</h1>
+                    <p class="hero-sub-title">
+                        Weekly lecture schedule for <strong><%= student.class_name %></strong> &bull; <%= student.department_name %>
+                    </p>
+                </div>
+                <div class="hero-action-box">
+                    <a href="/student/dashboard" class="btn btn-navy-pill">
+                        <i class="bi bi-grid-fill me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- WEEKDAY FILTER BUTTONS & SECTION INFO -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="fs-13 fw-bold text-dark me-2"><i class="bi bi-funnel me-1"></i>Filter Day:</span>
+                        <a href="/student/timetable" class="btn btn-sm <%= !filters.day ? 'btn-primary' : 'btn-outline-secondary' %> rounded-pill px-3">
+                            All Days
+                        </a>
+                        <% ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(d => { %>
+                            <a href="/student/timetable?day=<%= d %>" class="btn btn-sm <%= filters.day === d ? 'btn-primary' : 'btn-outline-secondary' %> rounded-pill px-3">
+                                <%= d %>
+                            </a>
+                        <% }) %>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark border p-2 fs-13">
+                            <i class="bi bi-building me-1 text-primary"></i>Section: <strong><%= student.class_name %></strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIMETABLE LIST / GRID -->
+            <div class="row g-4">
+                <% 
+                   const daysList = filters.day ? [filters.day] : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                   let totalSlots = 0;
+                %>
+
+                <% daysList.forEach(day => { 
+                    const daySlots = timetableSlots.filter(s => s.day_of_week === day);
+                    totalSlots += daySlots.length;
+                %>
+                    <div class="col-12 <%= filters.day ? 'col-lg-12' : 'col-xl-6' %>">
+                        <div class="aesthetic-white-card h-100">
+                            <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-circle" style="width:36px; height:36px; font-size:14px; background:#e8eaf6; color:#3949ab;">
+                                        <i class="bi bi-calendar-event"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="card-section-title mb-0"><%= day %></h2>
+                                        <small class="text-muted"><%= daySlots.length %> Lecture<%= daySlots.length === 1 ? '' : 's' %></small>
+                                    </div>
+                                </div>
+                                <span class="badge-status-lime fs-12"><%= daySlots.length %> Slots</span>
+                            </div>
+
+                            <% if (daySlots.length > 0) { %>
+                                <div class="timeline-slot-list">
+                                    <% daySlots.forEach(slot => { %>
+                                        <div class="p-3 mb-3 rounded-3 border bg-light position-relative">
+                                            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                                <div>
+                                                    <span class="badge bg-primary text-white me-2"><%= slot.subject_code %></span>
+                                                    <strong class="fs-15 text-dark"><%= slot.subject_name %></strong>
+                                                </div>
+                                                <div class="badge bg-white text-dark border px-2 py-1 fs-12">
+                                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><%= slot.classroom %>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top fs-13 text-secondary">
+                                                <div>
+                                                    <i class="bi bi-clock-fill text-primary me-1"></i>
+                                                    <strong><%= slot.start_time.slice(0,5) %> - <%= slot.end_time.slice(0,5) %></strong>
+                                                </div>
+                                                <div>
+                                                    <i class="bi bi-person-badge text-muted me-1"></i>
+                                                    <%= slot.faculty_name %> 
+                                                    <% if (slot.designation) { %>
+                                                        <span class="text-muted fs-12">(<%= slot.designation %>)</span>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-5 text-muted">
+                                    <i class="bi bi-cup-hot fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                    <p class="mb-0">No classes scheduled on <%= day %>.</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }) %>
+
+                <% if (totalSlots === 0) { %>
+                    <div class="col-12">
+                        <div class="aesthetic-white-card text-center py-5">
+                            <i class="bi bi-calendar-x fs-1 text-muted mb-3 d-block"></i>
+                            <h4 class="text-dark">No Timetable Slots Found</h4>
+                            <p class="text-muted">No timetable schedule has been mapped to your section (<%= student.class_name %>) yet.</p>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+</body>
+</html>

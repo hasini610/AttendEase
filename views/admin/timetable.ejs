@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: typeof notifCount !== 'undefined' ? notifCount : 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Master Academic Timetable</h1>
+                    <p class="hero-sub-title">View weekly class periods, allocated lecture halls, assigned faculty, and schedules</p>
+                </div>
+                <div class="hero-action-box">
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 border shadow-xs fs-13">
+                        <i class="bi bi-clock-history me-1 text-primary"></i> Mon – Fri Curriculum
+                    </span>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <form action="/admin/timetable" method="GET" class="row g-2 align-items-center">
+                    <div class="col-12 col-md-4">
+                        <select name="class_id" class="form-select pill-input" onchange="this.form.submit()">
+                            <option value="">All Class Sections</option>
+                            <% classes.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= filters.class_id == c.id ? 'selected' : '' %>>
+                                    <%= c.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <select name="faculty_id" class="form-select pill-input" onchange="this.form.submit()">
+                            <option value="">All Faculty</option>
+                            <% facultyList.forEach(f => { %>
+                                <option value="<%= f.id %>" <%= filters.faculty_id == f.id ? 'selected' : '' %>>
+                                    <%= f.full_name %> (<%= f.dept_code %>)
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select name="day" class="form-select pill-input" onchange="this.form.submit()">
+                            <option value="">All Weekdays</option>
+                            <% ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(d => { %>
+                                <option value="<%= d %>" <%= filters.day === d ? 'selected' : '' %>><%= d %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-navy-pill w-100 justify-content-center">Filter</button>
+                        <% if (filters.class_id || filters.faculty_id || filters.day) { %>
+                            <a href="/admin/timetable" class="btn btn-outline-secondary rounded-pill px-3" title="Clear Filters">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        <% } %>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TIMETABLE TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0">Scheduled Class Slots (<%= timetableSlots.length %>)</h2>
+                    <span class="badge-status-lime">Central Schedule</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Time Interval</th>
+                                <th>Class / Section</th>
+                                <th>Subject</th>
+                                <th>Faculty Member</th>
+                                <th>Classroom</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (timetableSlots && timetableSlots.length > 0) { %>
+                                <% timetableSlots.forEach(slot => { %>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 fw-bold">
+                                            <%= slot.day_of_week %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1 text-dark fw-semibold">
+                                            <i class="bi bi-clock me-1 text-muted"></i>
+                                            <%= slot.start_time.substring(0,5) %> – <%= slot.end_time.substring(0,5) %>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge-pill-soft fw-bold"><%= slot.class_name %></span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <span class="badge-pill-soft me-1"><%= slot.subject_code %></span>
+                                            <span class="fw-semibold text-dark"><%= slot.subject_name %></span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark"><%= slot.faculty_name %></div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border rounded-pill px-2 py-1">
+                                            <i class="bi bi-geo-alt me-1 text-danger"></i><%= slot.classroom || 'Room 101' %>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-calendar-x fs-2 d-block mb-2 text-muted opacity-50"></i>
+                                        No timetable slots found matching the selected filter criteria.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+</body>
+</html>

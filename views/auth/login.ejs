@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="login-page">
+
+<div class="login-wrapper">
+    <div class="login-card">
+
+        <!-- Logo and Branding -->
+        <div class="login-logo">
+            <div class="brand-glyph-circle">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <ellipse cx="12" cy="12" rx="4" ry="10"></ellipse>
+                </svg>
+            </div>
+            <h1 class="brand-title">AttendEase</h1>
+            <p class="brand-subtitle">Geethanjali College of Engineering and Technology</p>
+        </div>
+
+        <!-- Flash & Dynamic Message Container -->
+        <div id="dynamicAlertBox">
+            <%- include('../partials/flash') %>
+        </div>
+
+        <!-- Login Form -->
+        <form action="/login" method="POST" id="loginForm" novalidate>
+
+            <div class="mb-3">
+                <label for="username" class="form-label fs-13 fw-semibold">Username or Email</label>
+                <div class="input-container">
+                    <i class="bi bi-person-fill input-icon"></i>
+                    <input
+                        type="text"
+                        class="form-control pill-input"
+                        id="username"
+                        name="username"
+                        placeholder="e.g. admin or stu_arun"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+                <div class="invalid-feedback">Please enter your registered username or email.</div>
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="form-label fs-13 fw-semibold">Password</label>
+                <div class="input-container">
+                    <i class="bi bi-shield-lock-fill input-icon"></i>
+                    <input
+                        type="password"
+                        class="form-control pill-input has-toggle"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <button
+                        type="button"
+                        class="btn-toggle-pwd"
+                        id="togglePwdBtn"
+                        title="Show/hide password"
+                    >
+                        <i class="bi bi-eye" id="togglePwdIcon"></i>
+                    </button>
+                </div>
+                <div class="invalid-feedback">Please enter your password.</div>
+            </div>
+
+            <button type="submit" class="btn btn-login-pill" id="submitLoginBtn">
+                <span id="btnText">Sign In to Dashboard</span>
+                <i class="bi bi-arrow-right ms-2" id="btnIcon"></i>
+            </button>
+
+        </form>
+
+        <!-- Demo credentials with Quick-Fill buttons -->
+        <div class="demo-credentials-card mt-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="demo-header-title">
+                    <span class="lime-dot me-1"></span> Quick Demo Logins
+                </span>
+                <span class="badge-click-hint">Click to auto-fill</span>
+            </div>
+            
+            <div class="demo-pills-list">
+                <button type="button" class="demo-pill-btn" onclick="quickFill('admin', 'Admin@123')">
+                    <span class="role-badge admin">Admin</span>
+                    <span class="creds">admin &bull; Admin@123</span>
+                </button>
+                <button type="button" class="demo-pill-btn" onclick="quickFill('prof_anand', 'password123')">
+                    <span class="role-badge faculty">Faculty</span>
+                    <span class="creds">prof_anand &bull; password123</span>
+                </button>
+                <button type="button" class="demo-pill-btn" onclick="quickFill('stu_arun', 'password123')">
+                    <span class="role-badge student">Student</span>
+                    <span class="creds">stu_arun &bull; password123</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+// 1. Password Visibility Toggle
+const togglePwdBtn = document.getElementById('togglePwdBtn');
+const pwdInput     = document.getElementById('password');
+const pwdIcon      = document.getElementById('togglePwdIcon');
+
+if (togglePwdBtn && pwdInput) {
+    togglePwdBtn.addEventListener('click', function () {
+        const isPassword = pwdInput.type === 'password';
+        pwdInput.type = isPassword ? 'text' : 'password';
+        pwdIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+}
+
+// 2. Quick-fill helper for instant demo evaluation
+function quickFill(user, pass) {
+    document.getElementById('username').value = user;
+    document.getElementById('password').value = pass;
+    
+    // Clear previous errors
+    clearAlert();
+    document.getElementById('loginForm').classList.remove('was-validated');
+
+    // Visual pulse effect
+    const btn = document.getElementById('submitLoginBtn');
+    btn.classList.add('pulse-highlight');
+    setTimeout(() => btn.classList.remove('pulse-highlight'), 400);
+}
+
+// Helper to show dynamic alert without page reload
+function showAlert(message, type = 'danger') {
+    const box = document.getElementById('dynamicAlertBox');
+    box.innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show rounded-3 py-2 px-3 fs-13" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
+            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
+function clearAlert() {
+    const box = document.getElementById('dynamicAlertBox');
+    box.innerHTML = '';
+}
+
+// 3. Seamless Asynchronous Form Submission with Loading Spinner
+const loginForm = document.getElementById('loginForm');
+const submitBtn = document.getElementById('submitLoginBtn');
+const btnText   = document.getElementById('btnText');
+const btnIcon   = document.getElementById('btnIcon');
+
+loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    // Client-side HTML5 validation check
+    if (!loginForm.checkValidity()) {
+        loginForm.classList.add('was-validated');
+        return;
+    }
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    // Set Loading State
+    submitBtn.disabled = true;
+    btnText.textContent = 'Authenticating...';
+    btnIcon.className = 'spinner-border spinner-border-sm ms-2';
+
+    clearAlert();
+
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            btnText.textContent = 'Redirecting...';
+            btnIcon.className = 'bi bi-check2 ms-2';
+            window.location.href = data.redirectUrl || '/';
+        } else {
+            // Display error without page reload
+            showAlert(data.message || 'Invalid username or password.');
+            // Reset button
+            submitBtn.disabled = false;
+            btnText.textContent = 'Sign In to Dashboard';
+            btnIcon.className = 'bi bi-arrow-right ms-2';
+        }
+
+    } catch (err) {
+        console.error('Login network error:', err);
+        // If network issue, fallback to standard form submit
+        loginForm.submit();
+    }
+});
+</script>
+
+</body>
+</html>

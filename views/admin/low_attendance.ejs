@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: notifCount || 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Low Attendance Alert
+                    </h1>
+                    <p class="hero-sub-title">Students with overall attendance below <strong><%= threshold %>%</strong> — requires intervention</p>
+                </div>
+                <div class="hero-action-box d-flex gap-2">
+                    <a href="/admin/reports?<%= Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${filters[k]}`).join('&') %>" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Reports
+                    </a>
+                    <a href="/admin/reports/export?<%= Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${encodeURIComponent(filters[k])}`).join('&') %>" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS -->
+            <div class="aesthetic-white-card mb-4">
+                <form action="/admin/reports/low-attendance" method="GET" class="row g-3 align-items-end">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fs-12 fw-bold text-muted">Department</label>
+                        <select name="dept_id" class="form-select pill-input fs-13">
+                            <option value="">All Departments</option>
+                            <% filterOptions.departments.forEach(d => { %>
+                                <option value="<%= d.id %>" <%= filters.dept_id == d.id ? 'selected' : '' %>><%= d.code %> – <%= d.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fs-12 fw-bold text-muted">Class / Section</label>
+                        <select name="class_id" class="form-select pill-input fs-13">
+                            <option value="">All Sections</option>
+                            <% filterOptions.classes.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= filters.class_id == c.id ? 'selected' : '' %>><%= c.dept_code %> – <%= c.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">From</label>
+                        <input type="date" name="date_from" class="form-control pill-input fs-13" value="<%= filters.date_from %>">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">To</label>
+                        <input type="date" name="date_to" class="form-control pill-input fs-13" value="<%= filters.date_to %>">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-navy-pill w-100">
+                            <i class="bi bi-search me-1"></i>Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- COUNT CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle" style="width:50px;height:50px;background:#fff1f1;color:#d63031;font-size:22px;">
+                        <i class="bi bi-person-x-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fs-28 fw-800 text-danger"><%= lowRows.length %></div>
+                        <div class="text-muted fs-13">Students below <%= threshold %>% attendance for current view</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0">At-Risk Students</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0" id="lowAttendanceTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th>Sessions Needed*</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (lowRows.length > 0) {
+                                lowRows.forEach((r, i) => {
+                                    const t = Number(r.total), a = Number(r.attended);
+                                    const needed = t > 0 ? Math.max(0, Math.ceil((0.75 * t - a) / 0.25)) : 0;
+                            %>
+                            <tr>
+                                <td class="text-muted fs-12"><%= i + 1 %></td>
+                                <td><code><%= r.roll_number %></code></td>
+                                <td class="fw-bold text-dark"><%= r.full_name %></td>
+                                <td><span class="badge bg-light text-dark border"><%= r.dept_code %></span></td>
+                                <td><%= r.class_name %></td>
+                                <td class="text-center"><strong><%= a %></strong> / <%= t %></td>
+                                <td style="min-width:140px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                                            <div class="progress-bar bg-danger" style="width:<%= r.pct %>%"></div>
+                                        </div>
+                                        <span class="text-danger fw-800 fs-13"><%= r.pct %>%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-12 py-1">+<%= needed %> classes</span>
+                                </td>
+                            </tr>
+                            <% }) } else { %>
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-success">
+                                    <i class="bi bi-check-circle-fill fs-1 d-block mb-2"></i>
+                                    All students are above the <%= threshold %>% attendance threshold for the current filter.
+                                </td>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+                <% if (lowRows.length > 0) { %>
+                <div class="mt-3 text-muted fs-12">
+                    *Sessions Needed = consecutive classes required (without any absence) to reach <%= threshold %>% assuming existing sessions remain fixed.
+                </div>
+                <% } %>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+</body>
+</html>

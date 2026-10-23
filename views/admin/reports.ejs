@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: notifCount || 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Attendance Reports & Analytics</h1>
+                    <p class="hero-sub-title">
+                        College-wide attendance intelligence &bull; Attendance % = (Present + Late) / Total &times; 100 &bull; Threshold: <strong><%= threshold %>%</strong>
+                    </p>
+                </div>
+                <div class="hero-action-box d-flex gap-2">
+                    <a href="/admin/reports/low-attendance<%= Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${filters[k]}`).length ? '?' + Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${filters[k]}`).join('&') : '' %>" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Low Attendance
+                    </a>
+                    <a href="/admin/reports/export?<%= Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${encodeURIComponent(filters[k])}`).join('&') %>" class="btn btn-sm btn-outline-success rounded-pill px-3" id="btn-export-csv">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0"><i class="bi bi-funnel me-2"></i>Filters</h2>
+                    <% const hasFilters = Object.values(filters).some(v => v); %>
+                    <% if (hasFilters) { %>
+                        <a href="/admin/reports" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                            <i class="bi bi-x-circle me-1"></i>Clear All Filters
+                        </a>
+                    <% } %>
+                </div>
+                <form action="/admin/reports" method="GET" class="row g-3">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Department</label>
+                        <select name="dept_id" class="form-select pill-input fs-13">
+                            <option value="">All Departments</option>
+                            <% filterOptions.departments.forEach(d => { %>
+                                <option value="<%= d.id %>" <%= filters.dept_id == d.id ? 'selected' : '' %>><%= d.code %> – <%= d.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Class / Section</label>
+                        <select name="class_id" class="form-select pill-input fs-13">
+                            <option value="">All Sections</option>
+                            <% filterOptions.classes.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= filters.class_id == c.id ? 'selected' : '' %>><%= c.dept_code %> – <%= c.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Subject</label>
+                        <select name="subject_id" class="form-select pill-input fs-13">
+                            <option value="">All Subjects</option>
+                            <% filterOptions.subjects.forEach(s => { %>
+                                <option value="<%= s.id %>" <%= filters.subject_id == s.id ? 'selected' : '' %>><%= s.code %> – <%= s.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Faculty</label>
+                        <select name="faculty_id" class="form-select pill-input fs-13">
+                            <option value="">All Faculty</option>
+                            <% filterOptions.facultyList.forEach(f => { %>
+                                <option value="<%= f.id %>" <%= filters.faculty_id == f.id ? 'selected' : '' %>><%= f.full_name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <label class="form-label fs-12 fw-bold text-muted">From</label>
+                        <input type="date" name="date_from" class="form-control pill-input fs-13" value="<%= filters.date_from %>">
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <label class="form-label fs-12 fw-bold text-muted">To</label>
+                        <input type="date" name="date_to" class="form-control pill-input fs-13" value="<%= filters.date_to %>">
+                    </div>
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-navy-pill w-100">
+                            <i class="bi bi-search me-1"></i>Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- OVERALL METRICS ROW -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Overall Rate</div>
+                        <div class="fs-28 fw-800 mb-0 <%= overall.pct >= threshold ? 'text-success' : 'text-danger' %>"><%= overall.pct %>%</div>
+                        <div class="text-muted fs-11"><%= overall.pct >= threshold ? 'College-wide healthy' : 'Below target' %></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Total Records</div>
+                        <div class="fs-28 fw-800 text-dark mb-0"><%= overall.total.toLocaleString() %></div>
+                        <div class="text-muted fs-11">Attendance marks</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Attended</div>
+                        <div class="fs-28 fw-800 text-success mb-0"><%= overall.attended.toLocaleString() %></div>
+                        <div class="text-muted fs-11"><%= overall.present_count %> Present &bull; <%= overall.late_count %> Late</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Absences</div>
+                        <div class="fs-28 fw-800 text-danger mb-0"><%= overall.absent_count.toLocaleString() %></div>
+                        <div class="text-muted fs-11">Missed lectures</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS ROW -->
+            <div class="row g-4 mb-4">
+                <!-- Doughnut – Status Distribution -->
+                <div class="col-12 col-lg-4">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Attendance Status</h2>
+                            <span class="badge-pill-soft fs-12">Doughnut</span>
+                        </div>
+                        <% if (overall.total > 0) { %>
+                        <div class="position-relative d-flex justify-content-center" style="height:200px;">
+                            <canvas id="statusDonut"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-around pt-3 fs-12 text-center">
+                            <div><span class="d-block fw-800 text-success fs-16"><%= overall.present_count.toLocaleString() %></span>Present</div>
+                            <div><span class="d-block fw-800 text-warning fs-16"><%= overall.late_count.toLocaleString() %></span>Late</div>
+                            <div><span class="d-block fw-800 text-danger fs-16"><%= overall.absent_count.toLocaleString() %></span>Absent</div>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5 text-muted"><i class="bi bi-pie-chart fs-1 d-block mb-2"></i>No data for current filters.</div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Line – Attendance Trend -->
+                <div class="col-12 col-lg-8">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <div>
+                                <h2 class="card-section-title mb-0">Attendance Trend</h2>
+                                <small class="text-muted">Last 14 session dates (matching filter)</small>
+                            </div>
+                            <span class="badge-pill-soft fs-12">Line Chart</span>
+                        </div>
+                        <% if (trendData.labels.length > 0) { %>
+                        <div style="height:220px; position:relative;">
+                            <canvas id="trendLine"></canvas>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5 text-muted"><i class="bi bi-graph-up fs-1 d-block mb-2"></i>No trend data for current filters.</div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEPARTMENT & SECTION COMPARISON CHARTS -->
+            <div class="row g-4 mb-4">
+                <!-- Department Bar -->
+                <div class="col-12 col-lg-6">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Department Comparison</h2>
+                            <span class="badge-pill-soft fs-12">Bar Chart</span>
+                        </div>
+                        <% if (deptStats.length > 0) { %>
+                        <div style="height:220px; position:relative;">
+                            <canvas id="deptBar"></canvas>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5 text-muted"><i class="bi bi-bar-chart fs-1 d-block mb-2"></i>No department data.</div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Section Bar -->
+                <div class="col-12 col-lg-6">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Section Comparison</h2>
+                            <span class="badge-pill-soft fs-12">Bar Chart</span>
+                        </div>
+                        <% if (classStats.length > 0) { %>
+                        <div style="height:220px; position:relative;">
+                            <canvas id="classBar"></canvas>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5 text-muted"><i class="bi bi-bar-chart fs-1 d-block mb-2"></i>No section data.</div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBJECT-WISE BAR + TABLE -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-5">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Subject Attendance</h2>
+                            <span class="badge-pill-soft fs-12">Bar Chart</span>
+                        </div>
+                        <% if (subjectStats.length > 0) { %>
+                        <div style="height:280px; position:relative;">
+                            <canvas id="subjectBar"></canvas>
+                        </div>
+                        <% } else { %>
+                        <div class="text-center py-5 text-muted"><i class="bi bi-book fs-1 d-block mb-2"></i>No subject data.</div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-7">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Subject Breakdown (<%= subjectStats.length %>)</h2>
+                        </div>
+                        <div class="table-responsive" style="max-height: 320px; overflow-y:auto;">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead class="sticky-top bg-white">
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center text-success">Present</th>
+                                        <th class="text-center text-warning">Late</th>
+                                        <th class="text-center text-danger">Absent</th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (subjectStats.length > 0) { subjectStats.forEach(s => { %>
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-light text-dark border me-1"><%= s.subject_code %></span>
+                                            <span class="fs-13 fw-bold"><%= s.subject_name %></span>
+                                        </td>
+                                        <td class="text-center fw-bold"><%= s.total.toLocaleString() %></td>
+                                        <td class="text-center text-success fw-bold"><%= s.present_count %></td>
+                                        <td class="text-center text-warning fw-bold"><%= s.late_count %></td>
+                                        <td class="text-center text-danger fw-bold"><%= s.absent_count %></td>
+                                        <td style="min-width:120px;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress aesthetic-progress flex-grow-1" style="height:6px;">
+                                                    <div class="progress-bar <%= s.pct >= threshold ? 'bg-lime-glow' : 'bg-danger' %>" style="width:<%= s.pct %>%"></div>
+                                                </div>
+                                                <span class="fw-bold fs-12"><%= s.pct %>%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <% }) } else { %>
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">No records for current filters.</td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION TABLE -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0">Section-wise Breakdown (<%= classStats.length %>)</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center text-success">Present</th>
+                                <th class="text-center text-warning">Late</th>
+                                <th class="text-center text-danger">Absent</th>
+                                <th>Attendance Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (classStats.length > 0) { classStats.forEach(c => { %>
+                            <tr>
+                                <td><span class="badge bg-light text-dark border"><%= c.dept_code %></span></td>
+                                <td class="fw-bold text-dark"><%= c.class_name %></td>
+                                <td class="text-center"><%= c.total.toLocaleString() %></td>
+                                <td class="text-center text-success fw-bold"><%= c.present_count %></td>
+                                <td class="text-center text-warning fw-bold"><%= c.late_count %></td>
+                                <td class="text-center text-danger fw-bold"><%= c.absent_count %></td>
+                                <td style="min-width:150px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                                            <div class="progress-bar <%= c.pct >= threshold ? 'bg-lime-glow' : 'bg-danger' %>" style="width:<%= c.pct %>%"></div>
+                                        </div>
+                                        <span class="fw-bold fs-13"><%= c.pct %>%</span>
+                                    </div>
+                                </td>
+                                <td><span class="<%= c.pct >= threshold ? 'badge-status-lime' : 'badge-status-danger' %>"><%= c.pct >= threshold ? 'Healthy' : 'Low' %></span></td>
+                            </tr>
+                            <% }) } else { %>
+                            <tr><td colspan="8" class="text-center py-4 text-muted">No records for current filters.</td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE STUDENTS PREVIEW (up to 10) -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <div>
+                        <h2 class="card-section-title mb-0 text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Students Below <%= threshold %>% Threshold
+                        </h2>
+                        <small class="text-muted">Showing up to 10 of <%= lowRows.length %> student(s) at risk</small>
+                    </div>
+                    <a href="/admin/reports/low-attendance?<%= Object.keys(filters).filter(k=>filters[k]).map(k=>`${k}=${filters[k]}`).join('&') %>" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                        View All (<%= lowRows.length %>) &rarr;
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th>Sessions Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (lowRows.length > 0) {
+                                lowRows.slice(0,10).forEach(r => {
+                                    const t = Number(r.total), a = Number(r.attended);
+                                    const needed = t > 0 ? Math.max(0, Math.ceil((0.75*t - a)/0.25)) : 0;
+                            %>
+                            <tr>
+                                <td><code><%= r.roll_number %></code></td>
+                                <td class="fw-bold text-dark"><%= r.full_name %></td>
+                                <td><span class="badge bg-light text-dark border"><%= r.dept_code %></span></td>
+                                <td><%= r.class_name %></td>
+                                <td class="text-center"><%= a %> / <%= t %></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress aesthetic-progress flex-grow-1" style="height:6px; min-width:60px;">
+                                            <div class="progress-bar bg-danger" style="width:<%= r.pct %>%"></div>
+                                        </div>
+                                        <span class="text-danger fw-bold fs-12"><%= r.pct %>%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-12 py-1">+<%= needed %> classes</span>
+                                </td>
+                            </tr>
+                            <% }) } else { %>
+                            <tr><td colspan="7" class="text-center py-4 text-success"><i class="bi bi-check-circle me-2"></i>All students are above the <%= threshold %>% threshold for current filters.</td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /content-area -->
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const threshold = <%= threshold %>;
+
+    // 1. STATUS DOUGHNUT
+    <% if (overall.total > 0) { %>
+    (function() {
+        const ctx = document.getElementById('statusDonut');
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent'],
+                datasets: [{
+                    data: [<%= overall.present_count %>, <%= overall.late_count %>, <%= overall.absent_count %>],
+                    backgroundColor: ['#cbf946', '#f6c90e', '#ff7675'],
+                    borderColor: ['#a4df14', '#d4a900', '#d63031'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } }
+                }
+            }
+        });
+    })();
+    <% } %>
+
+    // 2. TREND LINE
+    <% if (trendData.labels.length > 0) { %>
+    (function() {
+        const ctx = document.getElementById('trendLine');
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: <%- JSON.stringify(trendData.labels) %>,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: <%- JSON.stringify(trendData.values) %>,
+                    borderColor: '#7c6fcd',
+                    backgroundColor: 'rgba(124,111,205,0.12)',
+                    pointBackgroundColor: '#7c6fcd',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4
+                }, {
+                    label: '<%= threshold %>% Target',
+                    data: Array(<%- trendData.labels.length %>).fill(<%= threshold %>),
+                    borderColor: '#cbf946',
+                    borderDash: [5,4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    })();
+    <% } %>
+
+    // 3. DEPARTMENT BAR
+    <% if (deptStats.length > 0) { %>
+    (function() {
+        const ctx = document.getElementById('deptBar');
+        if (!ctx) return;
+        const data = <%- JSON.stringify(deptStats.map(d => d.pct)) %>;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <%- JSON.stringify(deptStats.map(d => d.dept_code)) %>,
+                datasets: [{
+                    label: 'Attendance %',
+                    data,
+                    backgroundColor: data.map(v => v >= threshold ? '#cbf946' : '#ff7675'),
+                    borderColor: data.map(v => v >= threshold ? '#a4df14' : '#d63031'),
+                    borderWidth: 1.5,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    })();
+    <% } %>
+
+    // 4. SECTION BAR
+    <% if (classStats.length > 0) { %>
+    (function() {
+        const ctx = document.getElementById('classBar');
+        if (!ctx) return;
+        const data = <%- JSON.stringify(classStats.map(c => c.pct)) %>;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <%- JSON.stringify(classStats.map(c => c.dept_code + '-' + c.class_name)) %>,
+                datasets: [{
+                    label: 'Attendance %',
+                    data,
+                    backgroundColor: data.map(v => v >= threshold ? '#cbf946' : '#ff7675'),
+                    borderColor: data.map(v => v >= threshold ? '#a4df14' : '#d63031'),
+                    borderWidth: 1.5,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+                }
+            }
+        });
+    })();
+    <% } %>
+
+    // 5. SUBJECT BAR
+    <% if (subjectStats.length > 0) { %>
+    (function() {
+        const ctx = document.getElementById('subjectBar');
+        if (!ctx) return;
+        const data = <%- JSON.stringify(subjectStats.map(s => s.pct)) %>;
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <%- JSON.stringify(subjectStats.map(s => s.subject_code)) %>,
+                datasets: [{
+                    label: 'Attendance %',
+                    data,
+                    backgroundColor: data.map(v => v >= threshold ? '#cbf946' : '#ff7675'),
+                    borderColor: data.map(v => v >= threshold ? '#a4df14' : '#d63031'),
+                    borderWidth: 1.5,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                }
+            }
+        });
+    })();
+    <% } %>
+
+});
+</script>
+
+</body>
+</html>

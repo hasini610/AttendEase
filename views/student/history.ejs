@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">My Attendance History</h1>
+                    <p class="hero-sub-title">
+                        Complete chronological log of your class attendance records
+                    </p>
+                </div>
+                <div class="hero-action-box">
+                    <a href="/student/attendance" class="btn btn-navy-pill">
+                        <i class="bi bi-pie-chart-fill me-2"></i>Subject Standing
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0"><i class="bi bi-funnel me-2"></i>Filter Attendance Logs</h2>
+                    <% if (filters.subject_id || filters.status || filters.date_from || filters.date_to) { %>
+                        <a href="/student/history" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                            <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </a>
+                    <% } %>
+                </div>
+
+                <form action="/student/history" method="GET" class="row g-3">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fs-13 fw-semibold">Subject</label>
+                        <select name="subject_id" class="form-select pill-input">
+                            <option value="">All Enrolled Subjects</option>
+                            <% enrolledSubjects.forEach(sub => { %>
+                                <option value="<%= sub.id %>" <%= filters.subject_id == sub.id ? 'selected' : '' %>>
+                                    <%= sub.code %> - <%= sub.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fs-13 fw-semibold">Status</label>
+                        <select name="status" class="form-select pill-input">
+                            <option value="">All Statuses</option>
+                            <option value="present" <%= filters.status === 'present' ? 'selected' : '' %>>Present</option>
+                            <option value="late"    <%= filters.status === 'late'    ? 'selected' : '' %>>Late</option>
+                            <option value="absent"  <%= filters.status === 'absent'  ? 'selected' : '' %>>Absent</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-13 fw-semibold">From Date</label>
+                        <input type="date" name="date_from" class="form-control pill-input" value="<%= filters.date_from %>">
+                    </div>
+
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-13 fw-semibold">To Date</label>
+                        <input type="date" name="date_to" class="form-control pill-input" value="<%= filters.date_to %>">
+                    </div>
+
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-navy-pill w-100 py-2">
+                            <i class="bi bi-search me-1"></i> Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SUMMARY PILLS FOR FILTERED RESULT -->
+            <% 
+                const countPresent = records.filter(r => r.status === 'present').length;
+                const countLate    = records.filter(r => r.status === 'late').length;
+                const countAbsent  = records.filter(r => r.status === 'absent').length;
+                const totalFiltered = records.length;
+            %>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <span class="badge bg-light text-dark border p-2 fs-13">
+                    Total Records: <strong><%= totalFiltered %></strong>
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle p-2 fs-13">
+                    <i class="bi bi-check-circle me-1"></i>Present: <strong><%= countPresent %></strong>
+                </span>
+                <span class="badge bg-warning-subtle text-dark border border-warning-subtle p-2 fs-13">
+                    <i class="bi bi-clock-history me-1"></i>Late: <strong><%= countLate %></strong>
+                </span>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-2 fs-13">
+                    <i class="bi bi-x-circle me-1"></i>Absent: <strong><%= countAbsent %></strong>
+                </span>
+            </div>
+
+            <!-- RECORDS TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Session Date</th>
+                                <th>Subject</th>
+                                <th>Faculty</th>
+                                <th>Session / Topic</th>
+                                <th>Status</th>
+                                <th>Recorded At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (records && records.length > 0) { %>
+                                <% records.forEach((r, idx) => { %>
+                                <tr>
+                                    <td class="text-muted fs-12"><%= idx + 1 %></td>
+                                    <td class="text-nowrap fw-bold text-dark">
+                                        <i class="bi bi-calendar3 me-1 text-primary"></i>
+                                        <%= formatDate(r.session_date) %>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-light text-dark border"><%= r.subject_code %></span>
+                                            <span class="fw-bold text-dark"><%= r.subject_name %></span>
+                                        </div>
+                                    </td>
+                                    <td class="text-secondary fs-13">
+                                        <i class="bi bi-person me-1"></i><%= r.faculty_name %>
+                                    </td>
+                                    <td class="fs-13">
+                                        <span class="badge bg-secondary-subtle text-secondary me-1">
+                                            Lec #<%= r.session_number %>
+                                        </span>
+                                        <span class="text-muted"><%= r.topic || 'Regular Classroom Session' %></span>
+                                    </td>
+                                    <td>
+                                        <% if (r.status === 'present') { %>
+                                            <span class="badge-status-lime">
+                                                <i class="bi bi-check-circle me-1"></i>Present
+                                            </span>
+                                        <% } else if (r.status === 'late') { %>
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-clock-history me-1"></i>Late
+                                            </span>
+                                        <% } else { %>
+                                            <span class="badge-status-danger">
+                                                <i class="bi bi-x-circle me-1"></i>Absent
+                                            </span>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-muted fs-12 text-nowrap">
+                                        <%= r.marked_at ? new Date(r.marked_at).toLocaleString() : 'N/A' %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                        No attendance records match your filter criteria.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+</body>
+</html>

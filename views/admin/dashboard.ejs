@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: notifCount || 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO STATS HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">College Admin Command Center</h1>
+                    <p class="hero-sub-title"><%= collegeName %> &bull; Real-time attendance intelligence & institutional oversight</p>
+                </div>
+
+                <div class="hero-right-stats d-flex align-items-center gap-4">
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Total Enrollment</div>
+                        <div class="hero-stat-value"><%= stats.totalStudents || 0 %></div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Teaching Staff</div>
+                        <div class="hero-stat-value"><%= stats.totalFaculty || 0 %></div>
+                    </div>
+                    <div class="hero-action-box">
+                        <a href="/admin/students" class="btn btn-navy-pill">
+                            <i class="bi bi-people-fill me-2"></i>Manage Directory
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5-ENTITY METRIC COUNTERS ROW -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-4 col-xl">
+                    <a href="/admin/students" class="text-decoration-none">
+                        <div class="aesthetic-white-card p-3 d-flex align-items-center gap-3 transition-card">
+                            <div class="avatar-circle" style="width:44px; height:44px; background:#e0f2fe; color:#0284c7; font-size:18px;">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fs-12 text-muted fw-bold text-uppercase">Students</div>
+                                <div class="fs-20 fw-800 text-dark"><%= stats.totalStudents || 0 %></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-xl">
+                    <a href="/admin/faculty" class="text-decoration-none">
+                        <div class="aesthetic-white-card p-3 d-flex align-items-center gap-3 transition-card">
+                            <div class="avatar-circle" style="width:44px; height:44px; background:#e3f8d3; color:#3b7410; font-size:18px;">
+                                <i class="bi bi-person-badge-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fs-12 text-muted fw-bold text-uppercase">Faculty</div>
+                                <div class="fs-20 fw-800 text-dark"><%= stats.totalFaculty || 0 %></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-xl">
+                    <a href="/admin/departments" class="text-decoration-none">
+                        <div class="aesthetic-white-card p-3 d-flex align-items-center gap-3 transition-card">
+                            <div class="avatar-circle" style="width:44px; height:44px; background:#edeafc; color:#5345b5; font-size:18px;">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            <div>
+                                <div class="fs-12 text-muted fw-bold text-uppercase">Departments</div>
+                                <div class="fs-20 fw-800 text-dark"><%= stats.totalDepartments || 0 %></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-6 col-xl">
+                    <a href="/admin/classes" class="text-decoration-none">
+                        <div class="aesthetic-white-card p-3 d-flex align-items-center gap-3 transition-card">
+                            <div class="avatar-circle" style="width:44px; height:44px; background:#fff7ed; color:#ea580c; font-size:18px;">
+                                <i class="bi bi-door-closed-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fs-12 text-muted fw-bold text-uppercase">Sections</div>
+                                <div class="fs-20 fw-800 text-dark"><%= stats.totalClasses || 0 %></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-12 col-md-6 col-xl">
+                    <a href="/admin/subjects" class="text-decoration-none">
+                        <div class="aesthetic-white-card p-3 d-flex align-items-center gap-3 transition-card">
+                            <div class="avatar-circle" style="width:44px; height:44px; background:#fef9c3; color:#ca8a04; font-size:18px;">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <div>
+                                <div class="fs-12 text-muted fw-bold text-uppercase">Subjects</div>
+                                <div class="fs-20 fw-800 text-dark"><%= stats.totalSubjects || 0 %></div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- MAIN SCREENSHOT LAYOUT (2 Columns) -->
+            <div class="row g-4 mb-4">
+                
+                <!-- LEFT COLUMN: Mini Calendar + Department Checklist + Low Attendance -->
+                <div class="col-12 col-xl-4 col-lg-5">
+                    
+                    <!-- 1. Mini Calendar Card -->
+                    <div class="aesthetic-calendar-card mb-3">
+                        <div class="calendar-card-header d-flex align-items-center justify-content-between mb-3">
+                            <span class="cal-month-title" id="calMonthTitle"></span>
+                            <div class="cal-nav-arrows">
+                                <button type="button" class="cal-arrow-btn" onclick="prevMonth()" title="Previous Month"><i class="bi bi-chevron-left"></i></button>
+                                <button type="button" class="cal-arrow-btn" onclick="nextMonth()" title="Next Month"><i class="bi bi-chevron-right"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="calendar-days-row">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <div class="calendar-grid-dates" id="calendarDates">
+                            <!-- Dynamic dates rendered via script -->
+                        </div>
+                    </div>
+
+                    <!-- 2. Department Checklist Card -->
+                    <div class="aesthetic-white-card checklist-card mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h2 class="card-section-title mb-0">Department Health</h2>
+                            <span class="badge-pill-soft">Today <i class="bi bi-chevron-down ms-1"></i></span>
+                        </div>
+                        
+                        <div class="task-checklist-list">
+                            <% if (deptStats && deptStats.length > 0) { %>
+                                <% deptStats.forEach(d => { %>
+                                <div class="d-flex align-items-center justify-content-between py-2 border-bottom-subtle">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="lime-dot"></span>
+                                        <span class="fw-bold fs-13"><%= d.code %></span>
+                                    </div>
+                                    <span class="badge-status-lime"><%= d.pct %>% Avg</span>
+                                </div>
+                                <% }) %>
+                            <% } else { %>
+                                <p class="text-muted small">No department data</p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- 3. Critical Alerts Card -->
+                    <div class="aesthetic-white-card checklist-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h2 class="card-section-title mb-0">Shortage Alerts</h2>
+                            <span class="badge-status-danger"><%= lowAttendanceStudents.length %> critical</span>
+                        </div>
+                        <p class="text-muted small mb-2">Students below threshold attendance (<75%):</p>
+                        <div class="low-att-mini-list">
+                            <% lowAttendanceStudents.slice(0, 3).forEach(s => { %>
+                            <div class="d-flex align-items-center justify-content-between py-1">
+                                <span class="fs-13 fw-semibold"><%= s.full_name %></span>
+                                <span class="badge bg-danger-subtle text-danger"><%= s.pct %>%</span>
+                            </div>
+                            <% }) %>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Timetable Timeline Grid (Matching Screenshot) -->
+                <div class="col-12 col-xl-8 col-lg-7">
+                    <div class="aesthetic-white-card timeline-schedule-card h-100">
+                        
+                        <!-- Timeline Header -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <div class="timeline-date-range">
+                                <span class="timeline-main-date" id="academicWeekTitle">Academic Week</span>
+                            </div>
+                            <div class="timeline-nav-pills d-flex align-items-center gap-2">
+                                <button type="button" class="btn-today-pill" onclick="goToToday()">Today</button>
+                                <div class="arrow-pills-box">
+                                    <button type="button" class="timeline-arrow-btn" onclick="prevWeek()" title="Previous Week"><i class="bi bi-chevron-left"></i></button>
+                                    <button type="button" class="timeline-arrow-btn" onclick="nextWeek()" title="Next Week"><i class="bi bi-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Days of the Week Column Headers -->
+                        <div class="timetable-grid-container">
+                            <div class="timetable-days-header" id="timetableDaysHeader">
+                                <!-- Generated dynamically to match Academic Week -->
+                            </div>
+
+                            <!-- Timetable Timeline Grid -->
+                            <div class="timetable-body">
+                                
+                                <div class="timetable-row">
+                                    <div class="time-label">8 Am</div>
+                                    <div class="time-slots-grid">
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">CSE 3A - OS</div>
+                                                <div class="pill-time">8 AM - 9 AM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-lime">
+                                                <div class="pill-title">ECE 4B - DSP</div>
+                                                <div class="pill-time">8 AM - 9 AM</div>
+                                                <div class="pill-avatars"><span class="avatar-chip">👥 52</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">MECH 2A - Thermo</div>
+                                                <div class="pill-time">8 AM - 9 AM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                    </div>
+                                </div>
+
+                                <div class="timetable-row">
+                                    <div class="time-label">9 Am</div>
+                                    <div class="time-slots-grid">
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">CIVIL 3A - Struct</div>
+                                                <div class="pill-time">9 AM - 10 AM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">CSE 2B - DBMS</div>
+                                                <div class="pill-time">9 AM - 10 AM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-lime">
+                                                <div class="pill-title">Campus Hackathon</div>
+                                                <div class="pill-time">9 AM - 1 PM</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="timetable-row row-with-scrubber">
+                                    <div class="time-label">10 Am</div>
+                                    <div class="timeline-scrubber-line">
+                                        <span class="scrubber-dot"></span>
+                                    </div>
+                                    <div class="time-slots-grid">
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-lime">
+                                                <div class="pill-title">College Seminar</div>
+                                                <div class="pill-time">10 AM - 11 AM</div>
+                                                <div class="pill-avatars"><span class="avatar-chip">👥 180</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">CSE 4A - AI/ML</div>
+                                                <div class="pill-time">10 AM - 11 AM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-lime">
+                                                <div class="pill-title">ECE - VLSI Lab</div>
+                                                <div class="pill-time">10 AM - 11 AM</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="timetable-row">
+                                    <div class="time-label">11 Am</div>
+                                    <div class="time-slots-grid">
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-purple">
+                                                <div class="pill-title">CSE - Networks</div>
+                                                <div class="pill-time">11 AM - 12 PM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                        <div class="slot-cell">
+                                            <div class="schedule-pill-block pill-lime">
+                                                <div class="pill-title">Dean Address</div>
+                                                <div class="pill-time">11 AM - 12 PM</div>
+                                            </div>
+                                        </div>
+                                        <div class="slot-cell"></div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ANALYTICS CHARTS ROW (Overall Ratio + Trend) -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-4">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Attendance Status</h2>
+                            <span class="badge-pill-soft">Overall</span>
+                        </div>
+                        <div class="chart-canvas-box d-flex align-items-center justify-content-center" style="height:230px;">
+                            <% if (chartData.total > 0) { %>
+                                <canvas id="donutChart"></canvas>
+                            <% } else { %>
+                                <p class="text-muted">No attendance recorded yet</p>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">14-Day Attendance Trend (%)</h2>
+                            <span class="badge-pill-soft">Campus Trend</span>
+                        </div>
+                        <div class="chart-canvas-box" style="height:230px;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE TABLE ROW -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0">Students Below Threshold (<75%)</h2>
+                    <a href="/admin/reports" class="btn btn-navy-pill btn-sm">Full Attendance Report</a>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Roll Number</th>
+                                <th>Department</th>
+                                <th>Attendance Rate</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (lowAttendanceStudents && lowAttendanceStudents.length > 0) { %>
+                                <% lowAttendanceStudents.forEach(s => { %>
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark"><%= s.full_name %></div>
+                                    </td>
+                                    <td><code><%= s.roll_number %></code></td>
+                                    <td><span class="badge-pill-soft"><%= s.dept_code %></span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress aesthetic-progress flex-grow-1" style="width: 100px; height:7px;">
+                                                <div class="progress-bar bg-danger" style="width: <%= s.pct %>%;"></div>
+                                            </div>
+                                            <span class="fw-bold text-danger"><%= s.pct %>%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-navy-pill btn-sm py-1 px-3" onclick="alert('Notification alert sent to <%= s.full_name %>')">
+                                            Send Warning
+                                        </button>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">All students meet the 75% attendance threshold. Excellent!</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Donut Chart
+    const donutCtx = document.getElementById('donutChart');
+    if (donutCtx) {
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent'],
+                datasets: [{
+                    data: [<%= chartData.present %>, <%= chartData.late %>, <%= chartData.absent %>],
+                    backgroundColor: ['#cbf946', '#ffd32a', '#ff5e57'],
+                    borderWidth: 0,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Plus Jakarta Sans', size: 12 } } }
+                },
+                cutout: '72%'
+            }
+        });
+    }
+
+    // 2. Trend Line Chart
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        <% if (trendData && trendData.labels && trendData.labels.length > 0) { %>
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: <%- JSON.stringify(trendData.labels) %>,
+                    datasets: [{
+                        label: 'Attendance %',
+                        data: <%- JSON.stringify(trendData.values) %>,
+                        borderColor: '#28234d',
+                        backgroundColor: 'rgba(203, 249, 70, 0.25)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#cbf946',
+                        pointBorderColor: '#28234d',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        <% } %>
+    }
+
+    renderCalendar();
+    renderAcademicWeek();
+});
+
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const dayShortNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Selected date begins at runtime actual date
+let selectedDate = new Date();
+let calViewDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+
+function updateAll() {
+    renderCalendar();
+    renderAcademicWeek();
+}
+
+function renderCalendar() {
+    const year = calViewDate.getFullYear();
+    const month = calViewDate.getMonth();
+    document.getElementById('calMonthTitle').textContent = `${monthNames[month]} ${year}`;
+    
+    const datesContainer = document.getElementById('calendarDates');
+    datesContainer.innerHTML = '';
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startOffset = (firstDay + 6) % 7; // Monday as first column
+
+    for (let i = 0; i < startOffset; i++) {
+        const empty = document.createElement('span');
+        empty.className = 'cal-date-empty';
+        datesContainer.appendChild(empty);
+    }
+
+    const today = new Date();
+    const isSelectedMonth = (selectedDate.getFullYear() === year && selectedDate.getMonth() === month);
+    const isTodayMonth = (today.getFullYear() === year && today.getMonth() === month);
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const daySpan = document.createElement('span');
+        daySpan.className = 'cal-date-num';
+        daySpan.style.cursor = 'pointer';
+        daySpan.textContent = day;
+
+        if (isSelectedMonth && day === selectedDate.getDate()) {
+            daySpan.classList.add('active-lime-circle');
+        } else if (isTodayMonth && day === today.getDate()) {
+            daySpan.style.outline = '2px solid #a3e635';
+            daySpan.style.borderRadius = '50%';
+        }
+
+        daySpan.onclick = function () {
+            selectedDate = new Date(year, month, day);
+            updateAll();
+        };
+
+        datesContainer.appendChild(daySpan);
+    }
+}
+
+function prevMonth() {
+    calViewDate.setMonth(calViewDate.getMonth() - 1);
+    renderCalendar();
+}
+
+function nextMonth() {
+    calViewDate.setMonth(calViewDate.getMonth() + 1);
+    renderCalendar();
+}
+
+function getMonday(d) {
+    const dt = new Date(d);
+    const day = dt.getDay();
+    const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(dt.setDate(diff));
+    mon.setHours(0, 0, 0, 0);
+    return mon;
+}
+
+function renderAcademicWeek() {
+    const monday = getMonday(selectedDate);
+    const weekDays = [];
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        weekDays.push(d);
+    }
+    const saturday = weekDays[5];
+
+    // Range display
+    let rangeText = 'Academic Week &bull; ';
+    if (monday.getMonth() === saturday.getMonth()) {
+        rangeText += `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${saturday.getDate()}, ${saturday.getFullYear()}`;
+    } else if (monday.getFullYear() === saturday.getFullYear()) {
+        rangeText += `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[saturday.getMonth()]} ${saturday.getDate()}, ${saturday.getFullYear()}`;
+    } else {
+        rangeText += `${monthNames[monday.getMonth()]} ${monday.getDate()}, ${monday.getFullYear()} - ${monthNames[saturday.getMonth()]} ${saturday.getDate()}, ${saturday.getFullYear()}`;
+    }
+    document.getElementById('academicWeekTitle').innerHTML = rangeText;
+
+    // Day headers
+    const headerEl = document.getElementById('timetableDaysHeader');
+    headerEl.innerHTML = '<div class="time-col-spacer">GMT+5:30</div>';
+
+    const today = new Date();
+    weekDays.forEach((wd) => {
+        const isSelected = (wd.toDateString() === selectedDate.toDateString());
+
+        const col = document.createElement('div');
+        col.className = 'day-col-header' + (isSelected ? ' active-day' : '');
+        col.style.cursor = 'pointer';
+        col.title = 'Select ' + wd.toDateString();
+
+        col.onclick = function() {
+            selectedDate = new Date(wd);
+            calViewDate = new Date(wd.getFullYear(), wd.getMonth(), 1);
+            updateAll();
+        };
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'day-num';
+        numSpan.textContent = wd.getDate();
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'day-name';
+        nameSpan.textContent = dayShortNames[wd.getDay()];
+
+        col.appendChild(numSpan);
+        col.appendChild(nameSpan);
+        headerEl.appendChild(col);
+    });
+}
+
+function goToToday() {
+    selectedDate = new Date();
+    calViewDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    updateAll();
+}
+
+function prevWeek() {
+    selectedDate.setDate(selectedDate.getDate() - 7);
+    calViewDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    updateAll();
+}
+
+function nextWeek() {
+    selectedDate.setDate(selectedDate.getDate() + 7);
+    calViewDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    updateAll();
+}
+</script>
+
+</body>
+</html>

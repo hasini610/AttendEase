@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body class="login-page">
+
+<div class="login-wrapper text-center">
+    <div class="login-card">
+        <div class="brand-glyph-circle mb-3" style="width:68px; height:68px; font-size:32px;">
+            <% if (typeof statusCode !== 'undefined' && statusCode === 403) { %>
+                <i class="bi bi-shield-x text-warning"></i>
+            <% } else if (typeof statusCode !== 'undefined' && statusCode === 404) { %>
+                <i class="bi bi-search text-info"></i>
+            <% } else { %>
+                <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+            <% } %>
+        </div>
+
+        <h1 class="brand-title mb-2"><%= title || 'Error' %></h1>
+        <p class="brand-subtitle mb-4"><%= message || 'Something went wrong.' %></p>
+
+        <div class="d-flex justify-content-center gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-left me-1"></i> Go Back
+            </a>
+            <% if (typeof user !== 'undefined' && user) { %>
+                <a href="/<%= user.role %>/dashboard" class="btn btn-navy-pill">
+                    <i class="bi bi-grid-fill me-1"></i> Dashboard
+                </a>
+            <% } else { %>
+                <a href="/login" class="btn btn-navy-pill">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Return to Login
+                </a>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/scripts') %>
+</body>
+</html>

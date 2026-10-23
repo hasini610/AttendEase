@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: typeof notifCount !== 'undefined' ? notifCount : 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Class Attendance Analytics</h1>
+                    <p class="hero-sub-title">Detailed section standings, subject attendance percentages, and critical attendance alerts</p>
+                </div>
+                <div class="hero-action-box d-flex align-items-center gap-2">
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 border shadow-xs fs-13">
+                        <i class="bi bi-shield-exclamation text-danger me-1"></i> Threshold: &lt; <%= threshold %>%
+                    </span>
+                    <a href="/faculty/reports/export?<%= filters.class_id ? 'class_id=' + filters.class_id : '' %>" class="btn btn-sm btn-outline-success rounded-pill px-3" id="btn-faculty-export-csv">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <form action="/faculty/reports" method="GET" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fs-12 fw-bold text-muted mb-1">Class/Section</label>
+                        <select name="class_id" class="form-select pill-input">
+                            <option value="">All Assigned Sections</option>
+                            <% assignedClasses.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= filters.class_id == c.id ? 'selected' : '' %>>
+                                    <%= c.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-2 align-items-end">
+                        <button type="submit" class="btn btn-navy-pill px-4">Filter</button>
+                        <% if (filters.class_id) { %>
+                            <a href="/faculty/reports" class="btn btn-outline-secondary rounded-pill px-3" title="Clear Filter">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        <% } %>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ANALYTICS ROW -->
+            <%
+                const totalAttended = chartTotals.present + chartTotals.late;
+                const overallPct = chartTotals.total > 0 ? Math.round((totalAttended / chartTotals.total) * 100) : 0;
+            %>
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-4">
+                    <div class="aesthetic-white-card p-3 h-100 d-flex flex-column justify-content-between">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h2 class="card-section-title mb-0 fs-14">Status Distribution</h2>
+                            <span class="badge-pill-soft fs-11"><%= chartTotals.total %> Total Marks</span>
+                        </div>
+                        <div class="position-relative d-flex justify-content-center align-items-center my-2" style="height: 160px;">
+                            <canvas id="reportsDonut"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-around text-center pt-2 border-top-subtle fs-12">
+                            <div><span class="d-block fw-bold text-success fs-14"><%= chartTotals.present %></span>Present</div>
+                            <div><span class="d-block fw-bold text-warning fs-14"><%= chartTotals.late %></span>Late</div>
+                            <div><span class="d-block fw-bold text-danger fs-14"><%= chartTotals.absent %></span>Absent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div class="row g-3 h-100">
+                        <div class="col-6 col-md-6">
+                            <div class="aesthetic-white-card p-3 text-center h-100 d-flex flex-column justify-content-center">
+                                <div class="fs-12 text-muted fw-bold text-uppercase mb-1">Average Attendance</div>
+                                <div class="fs-32 fw-800 <%= overallPct >= threshold ? 'text-success' : 'text-danger' %>"><%= overallPct %>%</div>
+                                <div class="fs-12 text-muted">Combined rate for all assigned lectures</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <div class="aesthetic-white-card p-3 text-center h-100 d-flex flex-column justify-content-center">
+                                <div class="fs-12 text-muted fw-bold text-uppercase mb-1">Low Attendance Alerts</div>
+                                <div class="fs-32 fw-800 text-danger"><%= lowAttendanceStudents.length %></div>
+                                <div class="fs-12 text-muted">Students falling below <%= threshold %>% attendance</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION & SUBJECT SUMMARY TABLE CARD -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <div>
+                        <h2 class="card-section-title mb-0">Class & Course Breakdown (<%= summaries.length %>)</h2>
+                        <small class="text-muted">Attendance percentages calculated as (Present + Late) / Total Sessions</small>
+                    </div>
+                    <span class="badge-status-lime">Curriculum Summary</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Subject Code & Title</th>
+                                <th>Class & Section</th>
+                                <th>Total Lectures</th>
+                                <th>Present</th>
+                                <th>Late</th>
+                                <th>Absent</th>
+                                <th>Attendance Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (summaries && summaries.length > 0) { %>
+                                <% summaries.forEach(s => { %>
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark fs-14"><%= s.subject_name %></div>
+                                        <span class="badge-pill-soft"><%= s.subject_code %></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 fw-bold"><%= s.class_name %></span>
+                                    </td>
+                                    <td><span class="fw-bold text-dark"><%= s.total_sessions %></span> classes</td>
+                                    <td><span class="fw-semibold text-success"><%= s.present_count || 0 %></span></td>
+                                    <td><span class="fw-semibold text-warning-emphasis"><%= s.late_count || 0 %></span></td>
+                                    <td><span class="fw-semibold text-danger"><%= s.absent_count || 0 %></span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height:8px; min-width:80px;">
+                                                <div class="progress-bar <%= s.pct >= threshold ? 'bg-success' : 'bg-danger' %>" style="width: <%= s.pct %>%"></div>
+                                            </div>
+                                            <span class="fw-bold fs-13 <%= s.pct >= threshold ? 'text-success' : 'text-danger' %>"><%= s.pct %>%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">No course summaries available.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE CRITICAL ALERTS TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <div>
+                        <h2 class="card-section-title mb-0 text-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Students Below <%= threshold %>% Attendance (<%= lowAttendanceStudents.length %>)
+                        </h2>
+                        <small class="text-muted">Students requiring proactive academic intervention or detention notices</small>
+                    </div>
+                    <span class="badge-status-danger">Urgent Intervention</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Roll Number</th>
+                                <th>Student Name</th>
+                                <th>Class & Section</th>
+                                <th>Subject</th>
+                                <th>Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (lowAttendanceStudents && lowAttendanceStudents.length > 0) { %>
+                                <% lowAttendanceStudents.forEach(stu => { %>
+                                <tr>
+                                    <td><code><%= stu.roll_number %></code></td>
+                                    <td>
+                                        <div class="fw-bold text-dark"><%= stu.full_name %></div>
+                                        <small class="text-muted"><%= stu.email %></small>
+                                    </td>
+                                    <td><span class="badge-pill-soft"><%= stu.class_name %></span></td>
+                                    <td>
+                                        <div class="fw-semibold text-dark fs-13"><%= stu.subject_code %></div>
+                                        <small class="text-muted"><%= stu.subject_name %></small>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-dark"><%= stu.attended_lectures %></span> / <%= stu.total_lectures %> sessions
+                                    </td>
+                                    <td>
+                                        <span class="fw-800 text-danger fs-14"><%= stu.attendance_pct %>%</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-3 fw-bold">Critical Alert</span>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="bi bi-check-circle fs-2 text-success d-block mb-2 opacity-75"></i>
+                                        Excellent! No students in your assigned classes are below <%= threshold %>% attendance.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('reportsDonut');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent'],
+                datasets: [{
+                    data: [<%= chartTotals.present %>, <%= chartTotals.late %>, <%= chartTotals.absent %>],
+                    backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.label + ': ' + ctx.raw + ' marks';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+</body>
+</html>

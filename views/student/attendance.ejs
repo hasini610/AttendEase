@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+</head>
+<body class="aesthetic-app-body">
+
+<div class="aesthetic-layout-container">
+    <%- include('../partials/sidebar', { user, activePage }) %>
+
+    <div class="aesthetic-main-canvas">
+        <%- include('../partials/topbar', { user, pageTitle, notifCount: 0 }) %>
+
+        <div class="aesthetic-content-area">
+            <%- include('../partials/flash') %>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">My Subject Attendance</h1>
+                    <p class="hero-sub-title">
+                        Comprehensive subject-by-subject attendance standing & threshold compliance (<%= threshold %>% minimum)
+                    </p>
+                </div>
+                <div class="hero-action-box d-flex align-items-center gap-2">
+                    <a href="/student/history" class="btn btn-navy-pill">
+                        <i class="bi bi-clock-history me-2"></i>Date-wise History
+                    </a>
+                </div>
+            </div>
+
+            <!-- METRIC CARDS ROW -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <span class="text-muted fs-12 text-uppercase fw-semibold">Overall Rate</span>
+                        <h2 class="fs-24 fw-800 mb-0 mt-1 <%= overallPct < threshold ? 'text-danger' : 'text-success' %>">
+                            <%= overallPct %>%
+                        </h2>
+                        <small class="text-muted"><%= overallPct >= threshold ? 'Safe Standing' : 'Below 75% Target' %></small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <span class="text-muted fs-12 text-uppercase fw-semibold">Total Sessions</span>
+                        <h2 class="fs-24 fw-800 text-dark mb-0 mt-1"><%= totalSessions %></h2>
+                        <small class="text-muted">Conducted to date</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <span class="text-muted fs-12 text-uppercase fw-semibold">Attended</span>
+                        <h2 class="fs-24 fw-800 text-success mb-0 mt-1"><%= totalAttended %></h2>
+                        <small class="text-muted"><%= totalPresent %> Present &bull; <%= totalLate %> Late</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <span class="text-muted fs-12 text-uppercase fw-semibold">Absences</span>
+                        <h2 class="fs-24 fw-800 text-danger mb-0 mt-1"><%= totalAbsent %></h2>
+                        <small class="text-muted">Missed lectures</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE ALERT IF ANY SUBJECT IS BELOW 75% -->
+            <% if (lowSubjects && lowSubjects.length > 0) { %>
+            <div class="aesthetic-alert-banner alert-warning-glow mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="alert-icon-pill bg-danger text-white"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div>
+                        <h5 class="fw-bold mb-1 text-danger">Action Required: Attendance Shortage</h5>
+                        <p class="mb-0 fs-13 text-dark">
+                            You have <strong><%= lowSubjects.length %></strong> subject<%= lowSubjects.length > 1 ? 's' : '' %> below the mandatory <strong><%= threshold %>%</strong> attendance criteria. Review the required recovery sessions below and plan your attendance accordingly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <!-- SUBJECT-WISE ATTENDANCE TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <div>
+                        <h2 class="card-section-title mb-0">Enrolled Subjects (<%= subjectStats.length %>)</h2>
+                        <small class="text-muted">Section: <%= student.class_name %> &bull; <%= student.department_name %></small>
+                    </div>
+                    <span class="badge-pill-soft">
+                        <i class="bi bi-shield-check me-1"></i>Min <%= threshold %>% Req.
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Subject Code & Name</th>
+                                <th>Faculty</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center text-success">Present</th>
+                                <th class="text-center text-warning">Late</th>
+                                <th class="text-center text-danger">Absent</th>
+                                <th style="min-width: 170px;">Attendance %</th>
+                                <th>Status</th>
+                                <th>Action / Advice</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (subjectStats && subjectStats.length > 0) { %>
+                                <% subjectStats.forEach(s => { %>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-light text-dark border"><%= s.subject_code %></span>
+                                            <div>
+                                                <div class="fw-bold text-dark"><%= s.subject_name %></div>
+                                                <small class="text-muted"><%= s.credits %> Credits</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fs-13 text-dark fw-semibold"><%= s.faculty_name %></div>
+                                        <small class="text-muted"><%= s.designation || 'Faculty' %></small>
+                                    </td>
+                                    <td class="text-center fw-bold"><%= s.total %></td>
+                                    <td class="text-center fw-bold text-success"><%= s.present %></td>
+                                    <td class="text-center fw-bold text-warning"><%= s.late %></td>
+                                    <td class="text-center fw-bold text-danger"><%= s.absent %></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress aesthetic-progress flex-grow-1" style="height: 8px;">
+                                                <div
+                                                    class="progress-bar <%= s.pct >= threshold ? 'bg-lime-glow' : 'bg-danger' %>"
+                                                    style="width: <%= s.pct %>%;"
+                                                ></div>
+                                            </div>
+                                            <span class="fw-bold fs-13 <%= s.pct >= threshold ? 'text-dark' : 'text-danger' %>"><%= s.pct %>%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <% if (s.total === 0) { %>
+                                            <span class="badge bg-secondary">No Sessions</span>
+                                        <% } else if (s.pct >= threshold) { %>
+                                            <span class="badge-status-lime">Eligible</span>
+                                        <% } else { %>
+                                            <span class="badge-status-danger">Shortage</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <% if (s.isLow) { %>
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2 fs-12" title="Attend consecutive classes to reach 75%">
+                                                    Attend next <strong><%= s.neededToPass %></strong> classes
+                                                </span>
+                                            <% } else { %>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 fs-12">
+                                                    On Track
+                                                </span>
+                                            <% } %>
+                                            <a href="/student/history?subject_id=<%= s.subject_id %>" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fs-12" title="View Subject Log">
+                                                <i class="bi bi-clock-history"></i> Logs
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">No enrolled subjects found.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+</body>
+</html>
