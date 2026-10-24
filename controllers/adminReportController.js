@@ -4,8 +4,15 @@
 // "Late" counts as attended (present+late / total * 100).
 
 const db = require('../config/db');
+const path = require('path');
 
 const THRESHOLD = parseInt(process.env.ATTENDANCE_THRESHOLD || '75', 10);
+
+function wantsJson(req) {
+    return req.xhr || 
+           (req.headers.accept && req.headers.accept.includes('application/json')) ||
+           (req.originalUrl && req.originalUrl.startsWith('/api'));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CSV helpers
@@ -279,25 +286,30 @@ const adminReportController = {
                 [req.session.user.id]
             );
 
-            res.render('admin/reports', {
-                title: 'Attendance Reports & Analytics - AttendEase',
-                pageTitle: 'Reports & Analytics',
-                activePage: 'reports',
-                user: req.session.user,
-                notifCount: notifRow ? notifRow.c : 0,
-                threshold: THRESHOLD,
-                overall,
-                trendData,
-                deptStats,
-                classStats,
-                subjectStats,
-                lowRows,
-                filterOptions,
-                filters: { dept_id: dept_id||'', class_id: class_id||'', subject_id: subject_id||'',
-                           faculty_id: faculty_id||'', date_from: date_from||'', date_to: date_to||'' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    overall,
+                    trendData,
+                    deptStats,
+                    classStats,
+                    subjectStats,
+                    lowRows,
+                    filterOptions,
+                    filters: { dept_id: dept_id||'', class_id: class_id||'', subject_id: subject_id||'',
+                               faculty_id: faculty_id||'', date_from: date_from||'', date_to: date_to||'' },
+                    threshold: THRESHOLD,
+                    notifCount: notifRow ? notifRow.c : 0,
+                    user: req.session.user
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/admin/reports.html'));
         } catch (err) {
             console.error('Admin reports error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load analytics report.' });
+            }
             req.flash('error', 'Could not load analytics report.');
             res.redirect('/admin/dashboard');
         }
@@ -391,20 +403,25 @@ const adminReportController = {
                 [req.session.user.id]
             );
 
-            res.render('admin/low_attendance', {
-                title: 'Low Attendance Students - AttendEase',
-                pageTitle: 'Low Attendance Report',
-                activePage: 'reports',
-                user: req.session.user,
-                notifCount: notifRow ? notifRow.c : 0,
-                threshold: THRESHOLD,
-                lowRows,
-                filterOptions,
-                filters: { dept_id: dept_id||'', class_id: class_id||'',
-                           date_from: date_from||'', date_to: date_to||'' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    lowRows,
+                    filterOptions,
+                    filters: { dept_id: dept_id||'', class_id: class_id||'',
+                               date_from: date_from||'', date_to: date_to||'' },
+                    threshold: THRESHOLD,
+                    notifCount: notifRow ? notifRow.c : 0,
+                    user: req.session.user
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/admin/low_attendance.html'));
         } catch (err) {
             console.error('Low attendance report error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load low attendance report.' });
+            }
             req.flash('error', 'Could not load low attendance report.');
             res.redirect('/admin/reports');
         }

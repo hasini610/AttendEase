@@ -8,6 +8,7 @@ const profileController = require('../controllers/profileController');
 // All student routes require login + student role
 router.use(isLoggedIn, isStudent);
 
+// ---- HTML Page Routes (serve .html files) ----
 // 1. Dashboard
 router.get('/dashboard', studentController.dashboard);
 
@@ -25,5 +26,11 @@ router.get('/history', studentController.attendanceHistory);
 router.get('/profile',                  profileController.showProfile);
 router.post('/profile/update',          profileController.updateProfile);
 router.post('/profile/change-password', profileController.changePassword);
+
+// ---- API JSON Routes (same controllers, wantsJson() returns true because path starts with /api) ----
+router.get('/api/dashboard', studentController.dashboard);
+router.get('/api/timetable', studentController.myTimetable);
+router.get('/api/attendance', studentController.myAttendance);
+router.get('/api/history',   studentController.attendanceHistory);
 
 module.exports = router;

@@ -1,7 +1,16 @@
 // controllers/facultyController.js
 // Handles complete Faculty Module: Dashboard, Personal Timetable, Sessions, Attendance Marking, History, and Reports
+// Supports both Plain HTML5 views and Express JSON API responses
 
 const db = require('../config/db');
+const path = require('path');
+
+// Helper: check if client expects JSON
+function wantsJson(req) {
+    return req.xhr || 
+           (req.headers.accept && req.headers.accept.includes('application/json')) ||
+           (req.originalUrl && req.originalUrl.startsWith('/api'));
+}
 
 // Helper: Resolve faculty record for the authenticated session user
 async function getFaculty(userId) {
@@ -177,35 +186,35 @@ const facultyController = {
                 ? Math.round(((chartData.present + chartData.late) / chartData.total) * 100)
                 : 0;
 
-            res.render('faculty/dashboard', {
-                title: 'Faculty Dashboard - AttendEase',
-                pageTitle: 'Faculty Dashboard',
-                activePage: 'dashboard',
-                user: req.session.user,
-                faculty,
-                assignments,
-                todayLectures,
-                weeklySchedule,
-                recentSessions,
-                todayDay,
-                chartData,
-                stats: {
-                    assignedClasses:    assignments.length,
-                    totalStudents:      stuRow ? stuRow.cnt : 0,
-                    sessionsTaken:      sessRow ? sessRow.cnt : 0,
-                    lowAttendanceCount: lowRow ? lowRow.cnt : 0,
-                    overallPct
-                }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    assignments,
+                    todayLectures,
+                    weeklySchedule,
+                    recentSessions,
+                    todayDay,
+                    chartData,
+                    stats: {
+                        assignedClasses:    assignments.length,
+                        totalStudents:      stuRow ? stuRow.cnt : 0,
+                        sessionsTaken:      sessRow ? sessRow.cnt : 0,
+                        lowAttendanceCount: lowRow ? lowRow.cnt : 0,
+                        overallPct
+                    }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/dashboard.html'));
 
         } catch (err) {
             console.error('Faculty dashboard error:', err);
-            res.status(500).render('error', {
-                title: 'Dashboard Error',
-                message: 'Could not load faculty dashboard. Please try again.',
-                statusCode: 500,
-                user: req.session ? req.session.user : null
-            });
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load faculty dashboard.' });
+            }
+            return res.status(500).sendFile(path.join(__dirname, '../views_html/error.html'));
         }
     },
 
@@ -269,19 +278,24 @@ const facultyController = {
                 ORDER BY c.name ASC
             `, [faculty.id]);
 
-            res.render('faculty/timetable', {
-                title: 'My Timetable - AttendEase',
-                pageTitle: 'My Teaching Schedule',
-                activePage: 'timetable',
-                user: req.session.user,
-                faculty,
-                timetableSlots,
-                assignedClasses,
-                filters: { day: day || '', class_id: class_id || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    timetableSlots,
+                    assignedClasses,
+                    filters: { day: day || '', class_id: class_id || '' }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/timetable.html'));
 
         } catch (err) {
             console.error('Faculty timetable error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load timetable.' });
+            }
             req.flash('error', 'Could not load timetable.');
             res.redirect('/faculty/dashboard');
         }
@@ -348,19 +362,24 @@ const facultyController = {
                 ORDER BY c.name, s.code
             `, [faculty.id]);
 
-            res.render('faculty/sessions', {
-                title: 'Class Sessions - AttendEase',
-                pageTitle: 'Manage Class Sessions',
-                activePage: 'sessions',
-                user: req.session.user,
-                faculty,
-                sessions,
-                assignments,
-                filters: { assignment_id: assignment_id || '', class_id: class_id || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    sessions,
+                    assignments,
+                    filters: { assignment_id: assignment_id || '', class_id: class_id || '' }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/sessions.html'));
 
         } catch (err) {
             console.error('List sessions error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load sessions.' });
+            }
             req.flash('error', 'Could not load sessions.');
             res.redirect('/faculty/dashboard');
         }
@@ -450,15 +469,17 @@ const facultyController = {
                     LIMIT 20
                 `, [faculty.id]);
 
-                return res.render('faculty/mark_select', {
-                    title: 'Mark Attendance - AttendEase',
-                    pageTitle: 'Mark Student Attendance',
-                    activePage: 'mark',
-                    user: req.session.user,
-                    faculty,
-                    assignments,
-                    availableSessions
-                });
+                if (wantsJson(req)) {
+                    return res.json({
+                        success: true,
+                        user: req.session.user,
+                        faculty,
+                        assignments,
+                        availableSessions
+                    });
+                }
+
+                return res.sendFile(path.join(__dirname, '../views_html/faculty/mark_select.html'));
             }
 
             // Verify session belongs to authenticated faculty
@@ -501,18 +522,23 @@ const facultyController = {
                 ORDER BY s.roll_number ASC
             `, [sessionData.id, sessionData.class_id]);
 
-            res.render('faculty/mark', {
-                title: `Mark Attendance - ${sessionData.class_name} (${sessionData.subject_code})`,
-                pageTitle: 'Attendance Register',
-                activePage: 'mark',
-                user: req.session.user,
-                faculty,
-                sessionData,
-                students
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    sessionData,
+                    students
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/mark.html'));
 
         } catch (err) {
             console.error('Show mark attendance error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Error loading attendance sheet.' });
+            }
             req.flash('error', 'Error loading attendance sheet.');
             res.redirect('/faculty/dashboard');
         }
@@ -679,19 +705,24 @@ const facultyController = {
                 ORDER BY c.name
             `, [faculty.id]);
 
-            res.render('faculty/history', {
-                title: 'Attendance History - AttendEase',
-                pageTitle: 'Attendance History',
-                activePage: 'history',
-                user: req.session.user,
-                faculty,
-                sessions,
-                classes,
-                filters: { class_id: class_id || '', date_from: date_from || '', date_to: date_to || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    sessions,
+                    classes,
+                    filters: { class_id: class_id || '', date_from: date_from || '', date_to: date_to || '' }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/history.html'));
 
         } catch (err) {
             console.error('Attendance history error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load attendance history.' });
+            }
             req.flash('error', 'Could not load attendance history.');
             res.redirect('/faculty/dashboard');
         }
@@ -740,18 +771,23 @@ const facultyController = {
                 ORDER BY s.roll_number ASC
             `, [sessionId, sessionData.class_id]);
 
-            res.render('faculty/session_detail', {
-                title: `Session ${sessionData.session_date} - AttendEase`,
-                pageTitle: 'Lecture Attendance Details',
-                activePage: 'history',
-                user: req.session.user,
-                faculty,
-                sessionData,
-                studentRecords
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    sessionData,
+                    studentRecords
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/session_detail.html'));
 
         } catch (err) {
             console.error('Session details error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load session details.' });
+            }
             req.flash('error', 'Could not load session details.');
             res.redirect('/faculty/history');
         }
@@ -861,27 +897,32 @@ const facultyController = {
                 ORDER BY c.name
             `, [faculty.id]);
 
-            res.render('faculty/reports', {
-                title: 'Attendance Reports - AttendEase',
-                pageTitle: 'Attendance Analytics & Reports',
-                activePage: 'reports',
-                user: req.session.user,
-                faculty,
-                summaries,
-                lowAttendanceStudents,
-                assignedClasses,
-                threshold,
-                filters: { class_id: class_id || '' },
-                chartTotals: {
-                    present: totalPresent,
-                    late: totalLate,
-                    absent: totalAbsent,
-                    total: totalPresent + totalLate + totalAbsent
-                }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    faculty,
+                    summaries,
+                    lowAttendanceStudents,
+                    assignedClasses,
+                    threshold,
+                    filters: { class_id: class_id || '' },
+                    chartTotals: {
+                        present: totalPresent,
+                        late: totalLate,
+                        absent: totalAbsent,
+                        total: totalPresent + totalLate + totalAbsent
+                    }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/faculty/reports.html'));
 
         } catch (err) {
             console.error('Attendance reports error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load attendance reports.' });
+            }
             req.flash('error', 'Could not load attendance reports.');
             res.redirect('/faculty/dashboard');
         }

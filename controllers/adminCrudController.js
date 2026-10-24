@@ -1,8 +1,17 @@
 // controllers/adminCrudController.js
 // Handles complete CRUD operations and timetable views for Admin Module
+// Supports both Plain HTML5 views and Express JSON API responses
 
 const bcrypt = require('bcryptjs');
 const db     = require('../config/db');
+const path   = require('path');
+
+// Helper: check if client expects JSON
+function wantsJson(req) {
+    return req.xhr || 
+           (req.headers.accept && req.headers.accept.includes('application/json')) ||
+           (req.originalUrl && req.originalUrl.startsWith('/api'));
+}
 
 const adminCrudController = {
 
@@ -106,22 +115,20 @@ const adminCrudController = {
             const [semesters]   = await db.query('SELECT * FROM semesters WHERE is_active = 1');
             const [acYears]     = await db.query('SELECT * FROM academic_years WHERE is_active = 1');
 
-            res.render('admin/students', {
-                title: 'Manage Students - AttendEase',
-                pageTitle: 'Students Management',
-                activePage: 'students',
-                user: req.session.user,
-                students,
-                departments,
-                classes,
-                semesters,
-                acYears,
-                pagination: { page, limit, totalCount, totalPages },
-                filters: { dept: dept || '', class_id: class_id || '', q: q ? q.trim() : '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    students, departments, classes, semesters, acYears,
+                    pagination: { page, limit, totalCount, totalPages },
+                    filters: { dept: dept || '', class_id: class_id || '', q: q ? q.trim() : '' }
+                });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/students.html'));
 
         } catch (err) {
             console.error('List students error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Error loading students list.' });
             req.flash('error', 'Error loading students list.');
             res.redirect('/admin/dashboard');
         }
@@ -350,19 +357,20 @@ const adminCrudController = {
             const [facultyMembers] = await db.query(query, params);
             const [departments]    = await db.query('SELECT * FROM departments ORDER BY name');
 
-            res.render('admin/faculty', {
-                title: 'Manage Faculty - AttendEase',
-                pageTitle: 'Faculty Management',
-                activePage: 'faculty',
-                user: req.session.user,
-                facultyMembers,
-                departments,
-                pagination: { page, limit, totalCount, totalPages },
-                filters: { dept: dept || '', q: q ? q.trim() : '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    facultyMembers, departments,
+                    pagination: { page, limit, totalCount, totalPages },
+                    filters: { dept: dept || '', q: q ? q.trim() : '' }
+                });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/faculty.html'));
 
         } catch (err) {
             console.error('List faculty error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load faculty list.' });
             req.flash('error', 'Could not load faculty list.');
             res.redirect('/admin/dashboard');
         }
@@ -514,15 +522,13 @@ const adminCrudController = {
                 ORDER BY d.name ASC
             `);
 
-            res.render('admin/departments', {
-                title: 'Manage Departments - AttendEase',
-                pageTitle: 'Departments',
-                activePage: 'departments',
-                user: req.session.user,
-                departments
-            });
+            if (wantsJson(req)) {
+                return res.json({ success: true, user: req.session.user, departments });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/departments.html'));
         } catch (err) {
             console.error('List departments error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load departments.' });
             req.flash('error', 'Could not load departments.');
             res.redirect('/admin/dashboard');
         }
@@ -618,16 +624,13 @@ const adminCrudController = {
 
             const [departments] = await db.query('SELECT * FROM departments ORDER BY name');
 
-            res.render('admin/subjects', {
-                title: 'Manage Subjects - AttendEase',
-                pageTitle: 'Subjects',
-                activePage: 'subjects',
-                user: req.session.user,
-                subjects,
-                departments
-            });
+            if (wantsJson(req)) {
+                return res.json({ success: true, user: req.session.user, subjects, departments });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/subjects.html'));
         } catch (err) {
             console.error('List subjects error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load subjects.' });
             req.flash('error', 'Could not load subjects.');
             res.redirect('/admin/dashboard');
         }
@@ -727,19 +730,13 @@ const adminCrudController = {
             const [semesters]   = await db.query('SELECT * FROM semesters ORDER BY name');
             const [acYears]     = await db.query('SELECT * FROM academic_years ORDER BY year_label DESC');
 
-            res.render('admin/classes', {
-                title: 'Manage Classes - AttendEase',
-                pageTitle: 'Classes & Sections',
-                activePage: 'classes',
-                user: req.session.user,
-                classes,
-                departments,
-                semesters,
-                acYears,
-                academicYears: acYears
-            });
+            if (wantsJson(req)) {
+                return res.json({ success: true, user: req.session.user, classes, departments, semesters, acYears, academicYears: acYears });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/classes.html'));
         } catch (err) {
             console.error('List classes error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load classes.' });
             req.flash('error', 'Could not load classes.');
             res.redirect('/admin/dashboard');
         }
@@ -869,21 +866,19 @@ const adminCrudController = {
                 ORDER BY u.full_name ASC
             `);
 
-            res.render('admin/assignments', {
-                title: 'Faculty Assignments - AttendEase',
-                pageTitle: 'Faculty Assignments',
-                activePage: 'assignments',
-                user: req.session.user,
-                assignments,
-                departments,
-                classes,
-                subjects,
-                facultyList,
-                filters: { dept: dept || '', class_id: class_id || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    assignments, departments, classes, subjects, facultyList,
+                    filters: { dept: dept || '', class_id: class_id || '' }
+                });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/assignments.html'));
 
         } catch (err) {
             console.error('List assignments error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load faculty assignments.' });
             req.flash('error', 'Could not load faculty assignments.');
             res.redirect('/admin/dashboard');
         }
@@ -998,19 +993,19 @@ const adminCrudController = {
                 ORDER BY u.full_name ASC
             `);
 
-            res.render('admin/timetable', {
-                title: 'Timetable Overview - AttendEase',
-                pageTitle: 'Master Timetable',
-                activePage: 'timetable',
-                user: req.session.user,
-                timetableSlots,
-                classes,
-                facultyList,
-                filters: { class_id: class_id || '', faculty_id: faculty_id || '', day: day || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    timetableSlots, classes, facultyList,
+                    filters: { class_id: class_id || '', faculty_id: faculty_id || '', day: day || '' }
+                });
+            }
+            return res.sendFile(path.join(__dirname, '../views_html/admin/timetable.html'));
 
         } catch (err) {
             console.error('Timetable view error:', err);
+            if (wantsJson(req)) return res.status(500).json({ success: false, message: 'Could not load timetable schedule.' });
             req.flash('error', 'Could not load timetable schedule.');
             res.redirect('/admin/dashboard');
         }

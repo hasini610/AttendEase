@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students Directory - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="students">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Students Directory"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Students Directory</h1>
+                    <p class="hero-sub-title">Manage student enrollments, academic profiles, and attendance standings</p>
+                </div>
+                <div class="hero-action-box">
+                    <button type="button" class="btn btn-navy-pill" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                        <i class="bi bi-person-plus-fill me-2"></i>+ Add New Student
+                    </button>
+                </div>
+            </div>
+
+            <!-- SEARCH & FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <form id="filterForm" class="row g-2 align-items-center" onsubmit="event.preventDefault(); applyFilters();">
+                    <div class="col-12 col-md-4">
+                        <div class="input-container">
+                            <i class="bi bi-search input-icon"></i>
+                            <input
+                                type="text"
+                                id="filterQ"
+                                name="q"
+                                class="form-control pill-input"
+                                placeholder="Search by name, roll number, email..."
+                            >
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select id="filterDept" name="dept" class="form-select pill-input" onchange="applyFilters()">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select id="filterClass" name="class_id" class="form-select pill-input" onchange="applyFilters()">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-navy-pill w-100 justify-content-center">Filter</button>
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" title="Clear Filters" onclick="clearFilters()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- STUDENTS TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0" id="tableHeaderCount">Enrolled Students (0)</h2>
+                    <span class="badge-status-lime">Active Database</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll Number</th>
+                                <th>Department &amp; Class</th>
+                                <th>Attendance %</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTbody">
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                                    Loading student directory...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PAGINATION -->
+                <div id="paginationContainer" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top-subtle d-none">
+                    <div class="text-muted fs-13" id="paginationInfo"></div>
+                    <nav aria-label="Students pagination">
+                        <ul class="pagination pagination-sm mb-0" id="paginationList"></ul>
+                    </nav>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content aesthetic-white-card p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom-subtle">
+                <h3 class="card-section-title mb-0">+ Add New Student</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/students/create" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control pill-input" placeholder="e.g. Ramesh Kumar" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Roll Number *</label>
+                        <input type="text" name="roll_number" class="form-control pill-input" placeholder="e.g. CS2024007" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control pill-input" placeholder="e.g. 9876543210">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Email Address *</label>
+                    <input type="email" name="email" class="form-control pill-input" placeholder="e.g. ramesh@student.svce.edu" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Department *</label>
+                        <select name="department_id" id="addStudentDeptSelect" class="form-select pill-input" required>
+                            <option value="">Select Dept</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Class Section</label>
+                        <select name="class_id" id="addStudentClassSelect" class="form-select pill-input">
+                            <option value="">Unassigned</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fs-13 fw-semibold">Initial Password</label>
+                    <input type="password" name="password" class="form-control pill-input" placeholder="Default: password123">
+                    <small class="text-muted">If left blank, default is <code>password123</code></small>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-navy-pill">Register Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- REUSABLE EDIT STUDENT MODAL -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content aesthetic-white-card p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom-subtle">
+                <h3 class="card-section-title mb-0">Edit Student</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editStudentForm" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Full Name</label>
+                    <input type="text" id="editFullName" name="full_name" class="form-control pill-input" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Roll Number</label>
+                        <input type="text" id="editRollNumber" name="roll_number" class="form-control pill-input" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Phone</label>
+                        <input type="text" id="editPhone" name="phone" class="form-control pill-input">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Email Address</label>
+                    <input type="email" id="editEmail" name="email" class="form-control pill-input" required>
+                </div>
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Department</label>
+                        <select id="editDepartment" name="department_id" class="form-select pill-input" required></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fs-13 fw-semibold">Assigned Class</label>
+                        <select id="editClass" name="class_id" class="form-select pill-input"></select>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-navy-pill">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+let allDepartments = [];
+let allClasses = [];
+let currentStudents = [];
+let currentPage = 1;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Populate form inputs from current search params if any
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('q')) document.getElementById('filterQ').value = params.get('q');
+    if (params.get('page')) currentPage = parseInt(params.get('page')) || 1;
+
+    loadStudents();
+});
+
+async function loadStudents(page = currentPage) {
+    currentPage = page;
+    const q = document.getElementById('filterQ').value.trim();
+    const dept = document.getElementById('filterDept').value;
+    const classId = document.getElementById('filterClass').value;
+
+    const query = new URLSearchParams({
+        page: currentPage,
+        q: q,
+        dept: dept,
+        class_id: classId
+    });
+
+    try {
+        const data = await AttendEase.apiFetch(`/api/admin/students?${query.toString()}`);
+        allDepartments = data.departments || [];
+        allClasses = data.classes || [];
+        currentStudents = data.students || [];
+
+        populateFilterDropdowns(data.filters || {});
+        renderStudentsTable(currentStudents);
+        renderPagination(data.pagination);
+    } catch (err) {
+        console.error('Failed to load students:', err);
+        AttendEase.showFlash('Failed to load students list.', 'error');
+    }
+}
+
+function populateFilterDropdowns(filters) {
+    const deptSelect = document.getElementById('filterDept');
+    const classSelect = document.getElementById('filterClass');
+    const addDeptSelect = document.getElementById('addStudentDeptSelect');
+    const addClassSelect = document.getElementById('addStudentClassSelect');
+
+    const selectedDept = filters.dept || '';
+    const selectedClass = filters.class_id || '';
+
+    deptSelect.innerHTML = '<option value="">All Departments</option>' +
+        allDepartments.map(d => `<option value="${d.id}" ${String(selectedDept) === String(d.id) ? 'selected' : ''}>${AttendEase.escapeHtml(d.code)} - ${AttendEase.escapeHtml(d.name)}</option>`).join('');
+
+    classSelect.innerHTML = '<option value="">All Classes</option>' +
+        allClasses.map(c => `<option value="${c.id}" ${String(selectedClass) === String(c.id) ? 'selected' : ''}>${AttendEase.escapeHtml(c.name)}</option>`).join('');
+
+    addDeptSelect.innerHTML = '<option value="">Select Dept</option>' +
+        allDepartments.map(d => `<option value="${d.id}">${AttendEase.escapeHtml(d.code)} - ${AttendEase.escapeHtml(d.name)}</option>`).join('');
+
+    addClassSelect.innerHTML = '<option value="">Unassigned</option>' +
+        allClasses.map(c => `<option value="${c.id}">${AttendEase.escapeHtml(c.name)}</option>`).join('');
+}
+
+function renderStudentsTable(students) {
+    const tbody = document.getElementById('studentsTbody');
+    document.getElementById('tableHeaderCount').textContent = `Enrolled Students (${students.length})`;
+
+    if (!students || students.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-people fs-2 d-block mb-2 text-muted opacity-50"></i>
+                    No students found matching your criteria.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = students.map(s => {
+        const initial = s.full_name ? s.full_name.charAt(0).toUpperCase() : 'S';
+        const pct = typeof s.pct !== 'undefined' ? s.pct : 0;
+        const isLow = pct < 75;
+
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-circle" style="width: 34px; height: 34px; font-size: 13px;">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark">${AttendEase.escapeHtml(s.full_name)}</div>
+                            <small class="text-muted">${AttendEase.escapeHtml(s.email)}</small>
+                        </div>
+                    </div>
+                </td>
+                <td><code>${AttendEase.escapeHtml(s.roll_number)}</code></td>
+                <td>
+                    <span class="badge-pill-soft">${AttendEase.escapeHtml(s.dept_code || '')}</span>
+                    <span class="text-muted ms-1">${AttendEase.escapeHtml(s.class_name || 'Unassigned')}</span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress aesthetic-progress flex-grow-1" style="width: 80px; height: 6px;">
+                            <div class="progress-bar ${!isLow ? 'bg-lime-glow' : 'bg-danger'}" style="width: ${pct}%;"></div>
+                        </div>
+                        <span class="fw-bold fs-13 ${isLow ? 'text-danger' : 'text-dark'}">${pct}%</span>
+                    </div>
+                </td>
+                <td>
+                    <form action="/admin/students/${s.student_id}/toggle" method="POST" style="display:inline;">
+                        <button type="submit" class="border-0 bg-transparent p-0" title="Click to toggle active status">
+                            ${s.is_active ? '<span class="badge-status-lime">Active</span>' : '<span class="badge-status-danger">Inactive</span>'}
+                        </button>
+                    </form>
+                </td>
+                <td class="text-end">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary rounded-pill me-1"
+                        onclick="openEditModal(${s.student_id})"
+                        title="Edit Student"
+                    >
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <form action="/admin/students/${s.student_id}/delete" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete student ${AttendEase.escapeHtml(s.full_name)}?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Delete Student">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openEditModal(studentId) {
+    const s = currentStudents.find(item => item.student_id === studentId);
+    if (!s) return;
+
+    document.getElementById('editStudentForm').action = `/admin/students/${studentId}/edit`;
+    document.getElementById('editFullName').value = s.full_name || '';
+    document.getElementById('editRollNumber').value = s.roll_number || '';
+    document.getElementById('editPhone').value = s.phone || '';
+    document.getElementById('editEmail').value = s.email || '';
+
+    const editDept = document.getElementById('editDepartment');
+    editDept.innerHTML = allDepartments.map(d => `
+        <option value="${d.id}" ${s.department_id === d.id ? 'selected' : ''}>
+            ${AttendEase.escapeHtml(d.code)} - ${AttendEase.escapeHtml(d.name)}
+        </option>
+    `).join('');
+
+    const editClass = document.getElementById('editClass');
+    editClass.innerHTML = '<option value="">Unassigned</option>' +
+        allClasses.map(c => `
+            <option value="${c.id}" ${s.class_id === c.id ? 'selected' : ''}>
+                ${AttendEase.escapeHtml(c.name)}
+            </option>
+        `).join('');
+
+    const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+    modal.show();
+}
+
+function renderPagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    if (!pagination || pagination.totalPages <= 1) {
+        container.classList.add('d-none');
+        return;
+    }
+    container.classList.remove('d-none');
+
+    document.getElementById('paginationInfo').innerHTML =
+        `Showing Page <strong>${pagination.page}</strong> of <strong>${pagination.totalPages}</strong> (${pagination.totalCount} total students)`;
+
+    const list = document.getElementById('paginationList');
+    let items = '';
+
+    // Prev
+    items += `
+        <li class="page-item ${pagination.page <= 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadStudents(${pagination.page - 1});">
+                <i class="bi bi-chevron-left me-1"></i>Prev
+            </a>
+        </li>
+    `;
+
+    // Numbers
+    for (let p = 1; p <= pagination.totalPages; p++) {
+        if (p === 1 || p === pagination.totalPages || (p >= pagination.page - 2 && p <= pagination.page + 2)) {
+            items += `
+                <li class="page-item ${pagination.page === p ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="event.preventDefault(); loadStudents(${p});">${p}</a>
+                </li>
+            `;
+        } else if (p === pagination.page - 3 || p === pagination.page + 3) {
+            items += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+
+    // Next
+    items += `
+        <li class="page-item ${pagination.page >= pagination.totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadStudents(${pagination.page + 1});">
+                Next<i class="bi bi-chevron-right ms-1"></i>
+            </a>
+        </li>
+    `;
+
+    list.innerHTML = items;
+}
+
+function applyFilters() {
+    loadStudents(1);
+}
+
+function clearFilters() {
+    document.getElementById('filterQ').value = '';
+    document.getElementById('filterDept').value = '';
+    document.getElementById('filterClass').value = '';
+    loadStudents(1);
+}
+</script>
+</body>
+</html>

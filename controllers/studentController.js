@@ -1,7 +1,9 @@
 // controllers/studentController.js
 // Handles complete Student Module: Dashboard, Timetable, Subject Attendance, History, and Warnings
+// Supports both Plain HTML5 views and Express JSON API responses
 
 const db = require('../config/db');
+const path = require('path');
 
 // Helper: Resolve student record & class enrollment for the authenticated user
 async function getStudent(userId) {
@@ -25,6 +27,14 @@ async function getStudent(userId) {
     return rows[0] || null;
 }
 
+// Helper: check if client expects JSON
+function wantsJson(req) {
+    return req.xhr || 
+           (req.headers.accept && req.headers.accept.includes('application/json')) ||
+           req.path.startsWith('/api') || 
+           (req.originalUrl && req.originalUrl.startsWith('/api'));
+}
+
 const studentController = {
 
     // ============================================================
@@ -34,6 +44,9 @@ const studentController = {
         try {
             const student = await getStudent(req.session.user.id);
             if (!student) {
+                if (wantsJson(req)) {
+                    return res.status(404).json({ success: false, message: 'Student academic record not found.' });
+                }
                 req.flash('error', 'Student academic record not found. Please contact administration.');
                 return req.session.destroy(() => {
                     res.clearCookie('attendease_sid', { path: '/' });
@@ -79,7 +92,6 @@ const studentController = {
                     const isLow    = total > 0 && pct < threshold;
 
                     // Calculate sessions needed to reach 75% if below threshold
-                    // Target: (attended + x) / (total + x) >= 0.75 => x >= (0.75 * total - attended) / 0.25
                     let neededToPass = 0;
                     if (isLow) {
                         neededToPass = Math.max(0, Math.ceil((0.75 * total - attended) / 0.25));
@@ -187,36 +199,36 @@ const studentController = {
                 [req.session.user.id]
             );
 
-            res.render('student/dashboard', {
-                title: 'Student Dashboard - AttendEase',
-                pageTitle: 'My Attendance Dashboard',
-                activePage: 'dashboard',
-                user: req.session.user,
-                student,
-                subjectStats,
-                totalSessions,
-                totalPresent,
-                totalLate,
-                totalAbsent,
-                totalAttended,
-                overallPct,
-                threshold,
-                lowSubjects,
-                todayLectures,
-                todayDay,
-                weeklySchedule,
-                recentAttendance,
-                notifCount: notifRow ? notifRow.c : 0
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    student,
+                    subjectStats,
+                    totalSessions,
+                    totalPresent,
+                    totalLate,
+                    totalAbsent,
+                    totalAttended,
+                    overallPct,
+                    threshold,
+                    lowSubjects,
+                    todayLectures,
+                    todayDay,
+                    weeklySchedule,
+                    recentAttendance,
+                    notifCount: notifRow ? notifRow.c : 0
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/student/dashboard.html'));
 
         } catch (err) {
             console.error('Student dashboard error:', err);
-            res.status(500).render('error', {
-                title: 'Dashboard Error',
-                message: 'Could not load your student dashboard. Please try again.',
-                statusCode: 500,
-                user: req.session ? req.session.user : null
-            });
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load your student dashboard.' });
+            }
+            return res.status(500).sendFile(path.join(__dirname, '../views_html/error.html'));
         }
     },
 
@@ -227,6 +239,9 @@ const studentController = {
         try {
             const student = await getStudent(req.session.user.id);
             if (!student || !student.class_id) {
+                if (wantsJson(req)) {
+                    return res.status(404).json({ success: false, message: 'You are not enrolled in a class section yet.' });
+                }
                 req.flash('error', 'You are not enrolled in a class section yet.');
                 return res.redirect('/student/dashboard');
             }
@@ -266,20 +281,25 @@ const studentController = {
 
             const [timetableSlots] = await db.query(query, params);
 
-            res.render('student/timetable', {
-                title: 'My Timetable - AttendEase',
-                pageTitle: 'My Class Schedule',
-                activePage: 'timetable',
-                user: req.session.user,
-                student,
-                timetableSlots,
-                filters: { day: day || '' }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    student,
+                    timetableSlots,
+                    filters: { day: day || '' }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/student/timetable.html'));
 
         } catch (err) {
             console.error('Student timetable error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load timetable.' });
+            }
             req.flash('error', 'Could not load timetable.');
-            res.redirect('/student/dashboard');
+            return res.redirect('/student/dashboard');
         }
     },
 
@@ -290,6 +310,9 @@ const studentController = {
         try {
             const student = await getStudent(req.session.user.id);
             if (!student || !student.class_id) {
+                if (wantsJson(req)) {
+                    return res.status(404).json({ success: false, message: 'Enrollment details missing.' });
+                }
                 req.flash('error', 'Enrollment details missing.');
                 return res.redirect('/student/dashboard');
             }
@@ -354,27 +377,32 @@ const studentController = {
             const overallPct    = totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : 0;
             const lowSubjects   = subjectStats.filter(s => s.isLow);
 
-            res.render('student/attendance', {
-                title: 'Subject Attendance - AttendEase',
-                pageTitle: 'My Subject Attendance',
-                activePage: 'attendance',
-                user: req.session.user,
-                student,
-                subjectStats,
-                totalSessions,
-                totalPresent,
-                totalLate,
-                totalAbsent,
-                totalAttended,
-                overallPct,
-                threshold,
-                lowSubjects
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    student,
+                    subjectStats,
+                    totalSessions,
+                    totalPresent,
+                    totalLate,
+                    totalAbsent,
+                    totalAttended,
+                    overallPct,
+                    threshold,
+                    lowSubjects
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/student/attendance.html'));
 
         } catch (err) {
             console.error('My attendance error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load attendance details.' });
+            }
             req.flash('error', 'Could not load attendance details.');
-            res.redirect('/student/dashboard');
+            return res.redirect('/student/dashboard');
         }
     },
 
@@ -384,7 +412,12 @@ const studentController = {
     async attendanceHistory(req, res) {
         try {
             const student = await getStudent(req.session.user.id);
-            if (!student) return res.redirect('/student/dashboard');
+            if (!student) {
+                if (wantsJson(req)) {
+                    return res.status(404).json({ success: false, message: 'Student record not found.' });
+                }
+                return res.redirect('/student/dashboard');
+            }
 
             const { subject_id, status, date_from, date_to } = req.query;
 
@@ -442,26 +475,31 @@ const studentController = {
                 ORDER BY sub.code ASC
             `, [student.class_id]);
 
-            res.render('student/history', {
-                title: 'Attendance History - AttendEase',
-                pageTitle: 'My Attendance History',
-                activePage: 'history',
-                user: req.session.user,
-                student,
-                records,
-                enrolledSubjects,
-                filters: {
-                    subject_id: subject_id || '',
-                    status: status || '',
-                    date_from: date_from || '',
-                    date_to: date_to || ''
-                }
-            });
+            if (wantsJson(req)) {
+                return res.json({
+                    success: true,
+                    user: req.session.user,
+                    student,
+                    records,
+                    enrolledSubjects,
+                    filters: {
+                        subject_id: subject_id || '',
+                        status: status || '',
+                        date_from: date_from || '',
+                        date_to: date_to || ''
+                    }
+                });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/student/history.html'));
 
         } catch (err) {
             console.error('Student attendance history error:', err);
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load attendance logs.' });
+            }
             req.flash('error', 'Could not load attendance logs.');
-            res.redirect('/student/dashboard');
+            return res.redirect('/student/dashboard');
         }
     }
 };

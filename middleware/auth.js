@@ -1,3 +1,5 @@
+const path = require('path');
+
 // middleware/auth.js
 // Server-side authentication and role-based access control (RBAC) middleware
 
@@ -38,12 +40,7 @@ function isAdmin(req, res, next) {
         return res.status(403).json({ success: false, message: 'Forbidden: Admin access required.' });
     }
 
-    res.status(403).render('error', {
-        title: 'Access Restricted',
-        message: 'You do not have administrative privileges to view or perform operations on this page.',
-        statusCode: 403,
-        user: req.session ? req.session.user : null
-    });
+    res.status(403).sendFile(path.join(__dirname, '../views_html/error.html'));
 }
 
 /**
@@ -59,12 +56,7 @@ function isFaculty(req, res, next) {
         return res.status(403).json({ success: false, message: 'Forbidden: Faculty access required.' });
     }
 
-    res.status(403).render('error', {
-        title: 'Access Restricted',
-        message: 'This area is restricted to college faculty members only.',
-        statusCode: 403,
-        user: req.session ? req.session.user : null
-    });
+    res.status(403).sendFile(path.join(__dirname, '../views_html/error.html'));
 }
 
 /**
@@ -80,12 +72,7 @@ function isStudent(req, res, next) {
         return res.status(403).json({ success: false, message: 'Forbidden: Student access required.' });
     }
 
-    res.status(403).render('error', {
-        title: 'Access Restricted',
-        message: 'This portal is restricted to students only.',
-        statusCode: 403,
-        user: req.session ? req.session.user : null
-    });
+    res.status(403).sendFile(path.join(__dirname, '../views_html/error.html'));
 }
 
 /**

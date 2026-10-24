@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance - Session Select - AttendEase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="mark">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Mark Student Attendance"></header>
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="hero-main-title">Mark Attendance</h1>
+                    <p class="hero-sub-title">Select an existing session or create a new one.</p>
+                </div>
+                <button class="btn btn-navy-pill" data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                    <i class="bi bi-plus-circle me-2"></i>New Session
+                </button>
+            </div>
+
+            <div class="aesthetic-white-card">
+                <h2 class="card-section-title mb-3">Recent Sessions — Select to Mark</h2>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Subject / Class</th>
+                                <th>Session #</th>
+                                <th>Enrolled</th>
+                                <th>Marked</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="availableSessionsTbody">
+                            <tr><td colspan="6" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading sessions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- New Session Modal -->
+<div class="modal fade" id="newSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Create New Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/faculty/sessions/create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Subject &amp; Class <span class="text-danger">*</span></label>
+                        <select class="form-select" name="assignment_id" id="newSessionAssignment" required>
+                            <option value="">Select subject and class...</option>
+                        </select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Session Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="session_date" id="newSessionDate" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Session #</label>
+                            <input type="number" class="form-control" name="session_number" min="1" value="1">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-semibold">Topic</label>
+                        <input type="text" class="form-control" name="topic" placeholder="e.g. Introduction to Stacks">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Create &amp; Mark</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('newSessionDate').value = today;
+
+    try {
+        const data = await AttendEase.apiFetch('/api/faculty/mark');
+        const sessions = data.availableSessions || [];
+        const assignments = data.assignments || [];
+
+        document.getElementById('newSessionAssignment').innerHTML =
+            '<option value="">Select subject and class...</option>' +
+            assignments.map(a => `<option value="${a.id}">${AttendEase.escapeHtml(a.class_name)} - ${AttendEase.escapeHtml(a.subject_code)}: ${AttendEase.escapeHtml(a.subject_name)}</option>`).join('');
+
+        const tbody = document.getElementById('availableSessionsTbody');
+        if (sessions.length > 0) {
+            tbody.innerHTML = sessions.map(s => `
+                <tr>
+                    <td class="text-nowrap">${AttendEase.formatDate(s.session_date)}</td>
+                    <td>
+                        <div class="fw-bold">${AttendEase.escapeHtml(s.class_name||'')}</div>
+                        <small class="text-muted">${AttendEase.escapeHtml(s.subject_code||'')} - ${AttendEase.escapeHtml(s.subject_name||'')}</small>
+                    </td>
+                    <td>#${s.session_number||1}</td>
+                    <td>${s.enrolled_count||0}</td>
+                    <td><span class="${(s.marked_count||0)>0?'text-success fw-bold':'text-muted'}">${s.marked_count||0}</span></td>
+                    <td>
+                        <a href="/faculty/mark/${s.id}" class="btn btn-sm btn-primary rounded-pill px-3">
+                            <i class="bi bi-pencil-square me-1"></i>Mark
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-folder-x fs-2 d-block mb-2"></i>No sessions yet. Create one to get started.</td></tr>`;
+        }
+    } catch (err) {
+        AttendEase.showFlash('Failed to load sessions.', 'error');
+    }
+});
+</script>
+</body>
+</html>

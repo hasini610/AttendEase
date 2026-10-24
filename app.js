@@ -13,9 +13,8 @@ const methodOverride  = require('method-override');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ---- 1. Template Engine ----
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+// ---- 1. Frontend: Plain HTML5, Bootstrap 5, Vanilla JS (No EJS Template Engine) ----
+// Frontend HTML views are served directly from views_html via route handlers / sendFile
 
 // ---- 2. Static Files ----
 app.use(express.static(path.join(__dirname, 'public')));
@@ -100,10 +99,14 @@ const adminRoutes   = require('./routes/admin');
 const facultyRoutes = require('./routes/faculty');
 const studentRoutes = require('./routes/student');
 
-app.use('/',         authRoutes);
-app.use('/admin',    adminRoutes);
-app.use('/faculty',  facultyRoutes);
-app.use('/student',  studentRoutes);
+app.use('/',              authRoutes);
+app.use('/admin',         adminRoutes);
+app.use('/faculty',       facultyRoutes);
+app.use('/student',       studentRoutes);
+// API aliases — HTML pages fetch from /api/student/* and /api/faculty/*
+app.use('/api/student',   studentRoutes);
+app.use('/api/faculty',   facultyRoutes);
+app.use('/api/admin',     adminRoutes);
 
 // ---- 9. Root Route Handler ----
 app.get('/', (req, res) => {
@@ -120,23 +123,21 @@ app.get('/', (req, res) => {
 
 // ---- 10. 404 Route Handler ----
 app.use((req, res) => {
-    res.status(404).render('error', {
-        title: 'Page Not Found',
-        message: 'The requested page or resource could not be found.',
-        statusCode: 404,
-        user: req.session ? req.session.user : null
-    });
+    const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+    if (wantsJson) {
+        return res.status(404).json({ success: false, message: 'The requested resource could not be found.' });
+    }
+    res.status(404).sendFile(path.join(__dirname, 'views_html/error.html'));
 });
 
 // ---- 11. Centralized Error Handler ----
 app.use((err, req, res, next) => {
     console.error('Unhandled server error:', err);
-    res.status(500).render('error', {
-        title: 'Server Error',
-        message: 'An unexpected internal server error occurred. Please try again shortly.',
-        statusCode: 500,
-        user: req.session ? req.session.user : null
-    });
+    const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+    if (wantsJson) {
+        return res.status(500).json({ success: false, message: 'An unexpected server error occurred.' });
+    }
+    res.status(500).sendFile(path.join(__dirname, 'views_html/error.html'));
 });
 
 // ---- 12. Start Express Server ----

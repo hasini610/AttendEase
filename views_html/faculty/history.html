@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance History - AttendEase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="history">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Attendance History"></header>
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="hero-main-title">Attendance History</h1>
+                    <p class="hero-sub-title">Review all conducted lecture sessions and their attendance records.</p>
+                </div>
+                <a href="/faculty/reports" class="btn btn-outline-primary rounded-pill px-3">
+                    <i class="bi bi-bar-chart me-1"></i>Analytics
+                </a>
+            </div>
+
+            <!-- Filters -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold fs-13">Filter by Class</label>
+                        <select class="form-select form-select-sm" id="filterClass">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold fs-13">Date From</label>
+                        <input type="date" class="form-control form-control-sm" id="filterDateFrom">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold fs-13">Date To</label>
+                        <input type="date" class="form-control form-control-sm" id="filterDateTo">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadHistory()">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill w-100 mt-1" id="clearFilterBtn" style="display:none" onclick="clearFilters()">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session History Table -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 class="card-section-title mb-0">Session Records <span class="badge bg-light text-dark border fs-12 ms-1" id="sessionCountBadge">...</span></h2>
+                    <a href="/faculty/reports/export" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="exportBtn">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Session #</th>
+                                <th>Subject</th>
+                                <th>Class</th>
+                                <th>Topic</th>
+                                <th class="text-center">Present</th>
+                                <th class="text-center">Absent</th>
+                                <th class="text-center">Rate</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTbody">
+                            <tr><td colspan="9" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+let classesLoaded = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('class_id')) document.getElementById('filterClass').dataset.init = urlParams.get('class_id');
+    if (urlParams.get('date_from')) document.getElementById('filterDateFrom').value = urlParams.get('date_from');
+    if (urlParams.get('date_to')) document.getElementById('filterDateTo').value = urlParams.get('date_to');
+    loadHistory();
+});
+
+async function loadHistory() {
+    const class_id = document.getElementById('filterClass').value;
+    const date_from = document.getElementById('filterDateFrom').value;
+    const date_to = document.getElementById('filterDateTo').value;
+    const hasFilter = class_id || date_from || date_to;
+    document.getElementById('clearFilterBtn').style.display = hasFilter ? 'block' : 'none';
+
+    const qs = new URLSearchParams();
+    if (class_id) qs.set('class_id', class_id);
+    if (date_from) qs.set('date_from', date_from);
+    if (date_to) qs.set('date_to', date_to);
+
+    try {
+        const data = await AttendEase.apiFetch(`/api/faculty/history${qs.toString() ? '?' + qs.toString() : ''}`);
+        renderHistory(data);
+    } catch (err) {
+        AttendEase.showFlash('Failed to load attendance history.', 'error');
+    }
+}
+
+function clearFilters() {
+    document.getElementById('filterClass').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    loadHistory();
+}
+
+function renderHistory(data) {
+    const sessions = data.sessions || [];
+    const classes = data.classes || [];
+
+    if (!classesLoaded) {
+        const classSel = document.getElementById('filterClass');
+        classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            classSel.appendChild(opt);
+        });
+        const initVal = classSel.dataset.init;
+        if (initVal) classSel.value = initVal;
+        classesLoaded = true;
+    }
+
+    document.getElementById('sessionCountBadge').textContent = `${sessions.length} sessions`;
+
+    const tbody = document.getElementById('historyTbody');
+    if (sessions.length > 0) {
+        tbody.innerHTML = sessions.map(s => {
+            const total = Number(s.total_marked)||0;
+            const present = (Number(s.present_count)||0) + (Number(s.late_count)||0);
+            const absent = Number(s.absent_count)||0;
+            const pct = total > 0 ? Math.round(present/total*100) : 0;
+            return `
+                <tr>
+                    <td class="text-nowrap"><i class="bi bi-calendar3 me-1 text-muted"></i>${AttendEase.formatDate(s.session_date)}</td>
+                    <td><span class="badge bg-light text-dark border">#${s.session_number||1}</span></td>
+                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">${AttendEase.escapeHtml(s.subject_code)}</span> <span class="text-dark fw-semibold">${AttendEase.escapeHtml(s.subject_name)}</span></td>
+                    <td class="text-muted">${AttendEase.escapeHtml(s.class_name)}</td>
+                    <td class="text-muted fs-13">${AttendEase.escapeHtml(s.topic||'Regular Lecture')}</td>
+                    <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">${present}</span></td>
+                    <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">${absent}</span></td>
+                    <td class="text-center"><span class="fw-bold ${pct>=75?'text-success':'text-danger'}">${pct}%</span></td>
+                    <td>
+                        <a href="/faculty/history/${s.session_id}" class="btn btn-sm btn-outline-primary rounded-pill px-2 fs-12 me-1">
+                            <i class="bi bi-eye me-1"></i>View
+                        </a>
+                        <a href="/faculty/mark/${s.session_id}" class="btn btn-sm btn-outline-success rounded-pill px-2 fs-12">
+                            <i class="bi bi-pencil-square me-1"></i>Edit
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-folder-x fs-2 d-block mb-2"></i>No sessions found for the selected filters.</td></tr>`;
+    }
+}
+</script>
+</body>
+</html>

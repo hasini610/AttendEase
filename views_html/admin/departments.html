@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Departments - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="departments">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="College Departments"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">College Departments</h1>
+                    <p class="hero-sub-title">Configure academic branches, student enrollments, and faculty affiliations</p>
+                </div>
+                <div class="hero-action-box">
+                    <button type="button" class="btn btn-navy-pill" data-bs-toggle="modal" data-bs-target="#addDeptModal">
+                        <i class="bi bi-building me-2"></i>+ Add Department
+                    </button>
+                </div>
+            </div>
+
+            <!-- DEPARTMENTS TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0" id="deptHeaderCount">Active Departments (0)</h2>
+                    <span class="badge-status-lime">Academic Units</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Department Name</th>
+                                <th>Branch Code</th>
+                                <th>Enrolled Students</th>
+                                <th>Faculty Count</th>
+                                <th>Curriculum Subjects</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentsTbody">
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                                    Loading departments...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ADD DEPARTMENT MODAL -->
+<div class="modal fade" id="addDeptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content aesthetic-white-card p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom-subtle">
+                <h3 class="card-section-title mb-0">+ Add Department</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/departments/create" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Department Name *</label>
+                    <input type="text" name="name" class="form-control pill-input" placeholder="e.g. Information Technology" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fs-13 fw-semibold">Branch Code *</label>
+                    <input type="text" name="code" class="form-control pill-input" placeholder="e.g. IT" required>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-navy-pill">Create Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- REUSABLE EDIT DEPARTMENT MODAL -->
+<div class="modal fade" id="editDeptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content aesthetic-white-card p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom-subtle">
+                <h3 class="card-section-title mb-0">Edit Department</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editDeptForm" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fs-13 fw-semibold">Department Name *</label>
+                    <input type="text" id="editDeptName" name="name" class="form-control pill-input" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fs-13 fw-semibold">Code / Abbreviation *</label>
+                    <input type="text" id="editDeptCode" name="code" class="form-control pill-input" required>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-navy-pill">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+let currentDepartments = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadDepartments();
+});
+
+async function loadDepartments() {
+    try {
+        const data = await AttendEase.apiFetch('/api/admin/departments');
+        currentDepartments = data.departments || [];
+        renderDepartmentsTable(currentDepartments);
+    } catch (err) {
+        console.error('Failed to load departments:', err);
+        AttendEase.showFlash('Failed to load departments list.', 'error');
+    }
+}
+
+function renderDepartmentsTable(depts) {
+    const tbody = document.getElementById('departmentsTbody');
+    document.getElementById('deptHeaderCount').textContent = `Active Departments (${depts.length})`;
+
+    if (!depts || depts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">No departments configured yet.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = depts.map(d => `
+        <tr>
+            <td>
+                <div class="fw-bold text-dark fs-14">${AttendEase.escapeHtml(d.name)}</div>
+            </td>
+            <td><span class="badge-pill-soft">${AttendEase.escapeHtml(d.code)}</span></td>
+            <td><span class="fw-bold text-dark">${d.student_count || 0}</span> students</td>
+            <td><span class="fw-bold text-dark">${d.faculty_count || 0}</span> staff</td>
+            <td><span class="fw-bold text-dark">${d.subject_count || 0}</span> courses</td>
+            <td class="text-end">
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary rounded-pill me-1"
+                    onclick="openEditModal(${d.id})"
+                    title="Edit Department"
+                >
+                    <i class="bi bi-pencil-fill"></i>
+                </button>
+                <form action="/admin/departments/${d.id}/delete" method="POST" style="display:inline;" onsubmit="return confirm('Delete department ${AttendEase.escapeHtml(d.name)}?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Delete">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openEditModal(deptId) {
+    const d = currentDepartments.find(item => item.id === deptId);
+    if (!d) return;
+
+    document.getElementById('editDeptForm').action = `/admin/departments/${deptId}/edit`;
+    document.getElementById('editDeptName').value = d.name || '';
+    document.getElementById('editDeptCode').value = d.code || '';
+
+    const modal = new bootstrap.Modal(document.getElementById('editDeptModal'));
+    modal.show();
+}
+</script>
+</body>
+</html>

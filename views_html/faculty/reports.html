@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Analytics & Reports - AttendEase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="aesthetic-app-body" data-active-page="reports">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Attendance Analytics & Reports"></header>
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="hero-main-title">Attendance Analytics &amp; Reports</h1>
+                    <p class="hero-sub-title">Subject-wise breakdown and student-level low-attendance alerts.</p>
+                </div>
+                <a href="/faculty/reports/export" class="btn btn-outline-primary rounded-pill px-3" id="exportBtn">
+                    <i class="bi bi-download me-1"></i>Export CSV
+                </a>
+            </div>
+
+            <!-- Filter -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold fs-13">Filter by Class</label>
+                        <select class="form-select form-select-sm" id="filterClass">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto">
+                        <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="loadReports()">Apply</button>
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 ms-1" onclick="clearFilter()">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Breakdown Chart -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-xl-6">
+                    <div class="aesthetic-white-card h-100">
+                        <h2 class="card-section-title mb-3">Overall Attendance Distribution</h2>
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="overallDonutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <div class="aesthetic-white-card h-100">
+                        <h2 class="card-section-title mb-3">Subject Attendance Rates</h2>
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="subjectBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Summaries Table -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 class="card-section-title mb-0">Subject-wise Attendance Summary</h2>
+                    <span class="badge bg-light text-dark border fs-12" id="subjectCountBadge">...</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th class="text-center">Sessions</th>
+                                <th class="text-center">Present</th>
+                                <th class="text-center">Absent</th>
+                                <th style="min-width: 180px;">Attendance Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summariesTbody">
+                            <tr><td colspan="6" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Low Attendance Alerts -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 class="card-section-title mb-0 text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Low Attendance Alerts <span class="badge bg-danger text-white border ms-1 fs-12" id="lowCountBadge">0</span>
+                    </h2>
+                    <small class="text-muted">Students below 75% threshold</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th class="text-center">Attended</th>
+                                <th class="text-center">Total</th>
+                                <th style="min-width: 140px;">Attendance %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowAttendanceTbody">
+                            <tr><td colspan="7" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+let donutChartInst = null, barChartInst = null;
+let classesLoaded = false;
+
+document.addEventListener('DOMContentLoaded', () => loadReports());
+
+async function loadReports() {
+    const class_id = document.getElementById('filterClass').value;
+    const qs = class_id ? `?class_id=${encodeURIComponent(class_id)}` : '';
+    try {
+        const data = await AttendEase.apiFetch(`/api/faculty/reports${qs}`);
+        renderReports(data);
+    } catch (err) {
+        AttendEase.showFlash('Failed to load attendance reports.', 'error');
+    }
+}
+
+function clearFilter() {
+    document.getElementById('filterClass').value = '';
+    loadReports();
+}
+
+function renderReports(data) {
+    const summaries = data.summaries || [];
+    const lowStudents = data.lowAttendanceStudents || [];
+    const classes = data.assignedClasses || [];
+    const chartTotals = data.chartTotals || { present: 0, late: 0, absent: 0, total: 0 };
+    const threshold = data.threshold || 75;
+    const class_id = document.getElementById('filterClass').value;
+
+    if (!classesLoaded) {
+        const sel = document.getElementById('filterClass');
+        classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+        classesLoaded = true;
+    }
+
+    // Export link
+    document.getElementById('exportBtn').href = `/faculty/reports/export${class_id ? '?class_id=' + class_id : ''}`;
+
+    // Overall Donut Chart
+    const donutCanvas = document.getElementById('overallDonutChart');
+    if (donutChartInst) donutChartInst.destroy();
+    donutChartInst = new Chart(donutCanvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Present', 'Late', 'Absent'],
+            datasets: [{ data: [chartTotals.present||0, chartTotals.late||0, chartTotals.absent||0], backgroundColor: ['#cbf946','#ffc107','#ff7675'], borderWidth: 2, hoverOffset: 6 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 16 } } } }
+    });
+
+    // Subject Bar Chart
+    const barCanvas = document.getElementById('subjectBarChart');
+    const barLabels = summaries.map(s => s.subject_code + ' - ' + s.class_name);
+    const barData = summaries.map(s => s.pct || 0);
+    if (barChartInst) barChartInst.destroy();
+    barChartInst = new Chart(barCanvas, {
+        type: 'bar',
+        data: {
+            labels: barLabels,
+            datasets: [{ label: 'Attendance %', data: barData, backgroundColor: barData.map(v => v >= threshold ? '#cbf946' : '#ff7675'), borderRadius: 6, borderWidth: 1.5 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}%` } } },
+            scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }, x: { grid: { display: false }, ticks: { maxRotation: 45 } } }
+        }
+    });
+
+    // Summaries table
+    document.getElementById('subjectCountBadge').textContent = `${summaries.length} subjects`;
+    const sumTbody = document.getElementById('summariesTbody');
+    if (summaries.length > 0) {
+        sumTbody.innerHTML = summaries.map(s => {
+            const attended = (Number(s.present_count)||0) + (Number(s.late_count)||0);
+            const pct = s.pct || 0;
+            return `
+                <tr>
+                    <td class="fw-semibold">${AttendEase.escapeHtml(s.class_name)}</td>
+                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">${AttendEase.escapeHtml(s.subject_code)}</span>${AttendEase.escapeHtml(s.subject_name)}</td>
+                    <td class="text-center">${s.total_sessions||0}</td>
+                    <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">${attended}</span></td>
+                    <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">${Number(s.absent_count)||0}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                                <div class="progress-bar ${pct>=threshold?'bg-lime-glow':'bg-danger'}" style="width:${pct}%"></div>
+                            </div>
+                            <span class="fw-bold fs-13 ${pct>=threshold?'text-success':'text-danger'}">${pct}%</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        sumTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No data for selected filter.</td></tr>`;
+    }
+
+    // Low Attendance table
+    document.getElementById('lowCountBadge').textContent = lowStudents.length;
+    const lowTbody = document.getElementById('lowAttendanceTbody');
+    if (lowStudents.length > 0) {
+        lowTbody.innerHTML = lowStudents.map(s => `
+            <tr class="table-danger-subtle">
+                <td><span class="badge bg-light text-dark border">${AttendEase.escapeHtml(s.roll_number||'')}</span></td>
+                <td class="fw-bold text-dark">${AttendEase.escapeHtml(s.full_name||'')}</td>
+                <td class="text-muted">${AttendEase.escapeHtml(s.class_name||'')}</td>
+                <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">${AttendEase.escapeHtml(s.subject_code||'')}</span></td>
+                <td class="text-center">${s.attended_lectures||0}</td>
+                <td class="text-center">${s.total_lectures||0}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                            <div class="progress-bar bg-danger" style="width:${s.attendance_pct||0}%"></div>
+                        </div>
+                        <span class="fw-bold text-danger fs-13">${s.attendance_pct||0}%</span>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        lowTbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-success fw-semibold"><i class="bi bi-check-circle me-2"></i>All students meet the ${threshold}% attendance requirement.</td></tr>`;
+    }
+}
+</script>
+</body>
+</html>

@@ -21,10 +21,18 @@ const authController = {
             }
         }
 
-        res.render('auth/login', {
-            title: 'Login - AttendEase',
-            error: req.flash('error'),
-            success: req.flash('success')
+        const path = require('path');
+        res.sendFile(path.join(__dirname, '../views_html/auth/login.html'));
+    },
+
+    // GET /api/auth/me - Return authenticated session user
+    getMe(req, res) {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ success: false, message: 'Unauthenticated' });
+        }
+        res.json({
+            success: true,
+            user: req.session.user
         });
     },
 

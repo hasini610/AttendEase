@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="aesthetic-app-body" data-active-page="dashboard">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Faculty Dashboard"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO STATS HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Faculty Schedule &amp; Attendance</h1>
+                    <p class="hero-sub-title" id="facultyHeroSubtitle">Loading faculty details...</p>
+                </div>
+                <div class="hero-right-stats d-flex align-items-center gap-4">
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Assigned Classes</div>
+                        <div class="hero-stat-value" id="statAssignedClasses">-</div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Sessions Taken</div>
+                        <div class="hero-stat-value" id="statSessionsTaken">-</div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Avg. Attendance</div>
+                        <div class="hero-stat-value text-success" id="statOverallPct">-</div>
+                    </div>
+                    <div class="hero-action-box">
+                        <a href="/faculty/mark" class="btn btn-navy-pill">
+                            <i class="bi bi-pencil-square me-2"></i>+ Mark Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN LAYOUT -->
+            <div class="row g-4 mb-4">
+                <!-- LEFT COLUMN -->
+                <div class="col-12 col-xl-4 col-lg-5">
+                    <!-- Mini Calendar -->
+                    <div class="aesthetic-calendar-card mb-3">
+                        <div class="calendar-card-header d-flex align-items-center justify-content-between mb-3">
+                            <span class="cal-month-title" id="calMonthTitle">Calendar</span>
+                            <div class="cal-nav-arrows">
+                                <button type="button" class="cal-arrow-btn" onclick="prevMonth()"><i class="bi bi-chevron-left"></i></button>
+                                <button type="button" class="cal-arrow-btn" onclick="nextMonth()"><i class="bi bi-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="calendar-days-row">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <div class="calendar-grid-dates" id="calendarDates"></div>
+                    </div>
+
+                    <!-- Today's Lectures -->
+                    <div class="aesthetic-white-card checklist-card mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h2 class="card-section-title mb-0">Today's Lectures</h2>
+                                <small class="text-muted" id="todayDayLabel"></small>
+                            </div>
+                            <span class="badge-pill-soft" id="todayPeriodCount">0 Periods</span>
+                        </div>
+                        <div id="todayLecturesList" class="task-checklist-list">
+                            <div class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="aesthetic-white-card mb-3">
+                        <h2 class="card-section-title mb-3">Quick Health</h2>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center border bg-light">
+                                    <div class="fw-bold fs-22 text-primary" id="qhTotalStudents">-</div>
+                                    <div class="text-muted fs-12">Total Students</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center border bg-light">
+                                    <div class="fw-bold fs-22 text-warning" id="qhLowAttendance">-</div>
+                                    <div class="text-muted fs-12">Low Attendance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="col-12 col-xl-8 col-lg-7">
+                    <!-- Attendance Chart -->
+                    <div class="aesthetic-white-card mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h2 class="card-section-title mb-0">Overall Attendance Breakdown</h2>
+                            <span class="badge-pill-soft fs-12" id="chartTotalLabel">Total: 0 records</span>
+                        </div>
+                        <div style="height: 240px; position: relative;">
+                            <canvas id="attendanceDonutChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Classes -->
+                    <div class="aesthetic-white-card mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h2 class="card-section-title mb-0">Assigned Classes &amp; Subjects</h2>
+                            <a href="/faculty/sessions" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="bi bi-folder me-1"></i>All Sessions
+                            </a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Class / Subject</th>
+                                        <th class="text-center">Students</th>
+                                        <th class="text-center">Sessions</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assignedClassesTbody">
+                                    <tr><td colspan="4" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading assignments...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions -->
+                    <div class="aesthetic-white-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h2 class="card-section-title mb-0">Recent Sessions</h2>
+                            <a href="/faculty/history" class="btn btn-sm btn-outline-secondary rounded-pill px-3">View All</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Subject / Class</th>
+                                        <th class="text-center">Present</th>
+                                        <th class="text-center">Absent</th>
+                                        <th class="text-center">Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentSessionsTbody">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading sessions...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Schedule Widget -->
+            <div class="aesthetic-white-card mb-4">
+                <h2 class="card-section-title mb-3">Weekly Teaching Schedule</h2>
+                <div id="facultyScheduleWidgetContainer"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/academic_schedule.js"></script>
+<script>
+let donutChart = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const data = await AttendEase.apiFetch('/api/faculty/dashboard');
+        renderFacultyDashboard(data);
+        renderCalendar();
+    } catch (err) {
+        console.error('Error loading faculty dashboard:', err);
+        AttendEase.showFlash('Failed to load dashboard data.', 'error');
+    }
+});
+
+function renderFacultyDashboard(data) {
+    const faculty = data.faculty || {};
+    const user = data.user || {};
+    const stats = data.stats || {};
+    const assignments = data.assignments || [];
+    const todayLectures = data.todayLectures || [];
+    const todayDay = data.todayDay || '';
+    const recentSessions = data.recentSessions || [];
+    const weeklySchedule = data.weeklySchedule || [];
+    const chartData = data.chartData || { present: 0, absent: 0, late: 0, total: 0 };
+
+    // Hero
+    document.getElementById('facultyHeroSubtitle').innerHTML =
+        `Welcome back, <strong>${AttendEase.escapeHtml(user.full_name || user.username)}</strong> &bull; ${AttendEase.escapeHtml(faculty.designation || '')} (${AttendEase.escapeHtml(faculty.dept_code || '')})`;
+    document.getElementById('statAssignedClasses').textContent = stats.assignedClasses || 0;
+    document.getElementById('statSessionsTaken').textContent = stats.sessionsTaken || 0;
+    document.getElementById('statOverallPct').textContent = (stats.overallPct || 0) + '%';
+    document.getElementById('qhTotalStudents').textContent = stats.totalStudents || 0;
+    document.getElementById('qhLowAttendance').textContent = stats.lowAttendanceCount || 0;
+
+    // Today's Lectures
+    document.getElementById('todayDayLabel').textContent = todayDay;
+    document.getElementById('todayPeriodCount').textContent = `${todayLectures.length} Periods`;
+    const todayList = document.getElementById('todayLecturesList');
+    if (todayLectures.length > 0) {
+        todayList.innerHTML = todayLectures.map(l => `
+            <div class="p-2 mb-2 rounded border bg-light-subtle d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="fw-bold text-dark fs-14">${AttendEase.escapeHtml(l.subject_name)}</div>
+                    <div class="fs-12 text-muted">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">${AttendEase.escapeHtml(l.class_name)}</span>
+                        <i class="bi bi-clock me-1"></i>${(l.start_time||'').slice(0,5)} - ${(l.end_time||'').slice(0,5)}
+                        <i class="bi bi-geo-alt ms-2 me-1"></i>${AttendEase.escapeHtml(l.classroom||'')}
+                    </div>
+                </div>
+                <a href="/faculty/mark" class="btn btn-sm btn-outline-primary rounded-pill px-2 fs-12">Mark</a>
+            </div>
+        `).join('');
+    } else {
+        todayList.innerHTML = `<div class="text-center py-4 text-muted"><i class="bi bi-calendar-x fs-2 d-block mb-1"></i>No lectures scheduled for ${AttendEase.escapeHtml(todayDay)}.</div>`;
+    }
+
+    // Donut Chart
+    const canvas = document.getElementById('attendanceDonutChart');
+    document.getElementById('chartTotalLabel').textContent = `Total: ${chartData.total || 0} records`;
+    if (canvas) {
+        if (donutChart) donutChart.destroy();
+        donutChart = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent'],
+                datasets: [{
+                    data: [chartData.present || 0, chartData.late || 0, chartData.absent || 0],
+                    backgroundColor: ['#cbf946', '#ffc107', '#ff7675'],
+                    borderColor: ['#a4df14', '#e0a800', '#d63031'],
+                    borderWidth: 2,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true, padding: 20 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${chartData.total > 0 ? Math.round(ctx.parsed / chartData.total * 100) : 0}%)` } }
+                }
+            }
+        });
+    }
+
+    // Assigned Classes Table
+    const assignTbody = document.getElementById('assignedClassesTbody');
+    if (assignments.length > 0) {
+        assignTbody.innerHTML = assignments.map(a => `
+            <tr>
+                <td>
+                    <div class="fw-bold text-dark">${AttendEase.escapeHtml(a.class_name)}</div>
+                    <small class="text-muted"><span class="badge bg-light text-dark border me-1">${AttendEase.escapeHtml(a.subject_code)}</span>${AttendEase.escapeHtml(a.subject_name)}</small>
+                </td>
+                <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">${a.student_count || 0}</span></td>
+                <td class="text-center"><span class="badge bg-light text-secondary border">${a.session_count || 0}</span></td>
+                <td>
+                    <a href="/faculty/mark" class="btn btn-sm btn-outline-success rounded-pill px-2 fs-12 me-1">
+                        <i class="bi bi-pencil-square me-1"></i>Mark
+                    </a>
+                    <a href="/faculty/sessions?class_id=${a.class_id}" class="btn btn-sm btn-outline-secondary rounded-pill px-2 fs-12">
+                        <i class="bi bi-list-ul me-1"></i>Sessions
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        assignTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">No class assignments found.</td></tr>`;
+    }
+
+    // Recent Sessions Table
+    const recentTbody = document.getElementById('recentSessionsTbody');
+    if (recentSessions.length > 0) {
+        recentTbody.innerHTML = recentSessions.map(sess => {
+            const total = Number(sess.total_marked) || 0;
+            const present = Number(sess.present_count) || 0;
+            const late = Number(sess.late_count) || 0;
+            const absent = Number(sess.absent_count) || 0;
+            const attended = present + late;
+            const pct = total > 0 ? Math.round(attended / total * 100) : 0;
+            return `
+                <tr>
+                    <td class="text-nowrap"><i class="bi bi-calendar3 me-1 text-muted"></i>${AttendEase.formatDate(sess.session_date)}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${AttendEase.escapeHtml(sess.subject_name)}</div>
+                        <small class="text-muted">${AttendEase.escapeHtml(sess.class_name)} &bull; Session #${sess.session_number || 1}</small>
+                    </td>
+                    <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">${attended}</span></td>
+                    <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">${absent}</span></td>
+                    <td class="text-center">
+                        <span class="fw-bold ${pct >= 75 ? 'text-success' : 'text-danger'}">${pct}%</span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        recentTbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No sessions conducted yet.</td></tr>`;
+    }
+
+    // Academic Week Schedule
+    renderAcademicWeekSchedule('facultyScheduleWidgetContainer', weeklySchedule, { isFaculty: true });
+}
+
+// Mini Calendar
+let currentCalDate = new Date();
+function renderCalendar() {
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const mt = document.getElementById('calMonthTitle');
+    if (mt) mt.textContent = `${monthNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`;
+    const dc = document.getElementById('calendarDates');
+    if (!dc) return;
+    dc.innerHTML = '';
+    const year = currentCalDate.getFullYear(), month = currentCalDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startOffset = (firstDay + 6) % 7;
+    for (let i = 0; i < startOffset; i++) { const e = document.createElement('span'); e.className='cal-date-empty'; dc.appendChild(e); }
+    const today = new Date();
+    for (let d = 1; d <= daysInMonth; d++) {
+        const sp = document.createElement('span');
+        sp.className = 'cal-date-num';
+        sp.textContent = d;
+        if (today.getDate()===d && today.getMonth()===month && today.getFullYear()===year) sp.classList.add('active-lime-circle');
+        dc.appendChild(sp);
+    }
+}
+function prevMonth() { currentCalDate.setMonth(currentCalDate.getMonth()-1); renderCalendar(); }
+function nextMonth() { currentCalDate.setMonth(currentCalDate.getMonth()+1); renderCalendar(); }
+</script>
+</body>
+</html>

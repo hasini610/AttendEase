@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Academic Timetable - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="timetable">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Master Academic Timetable"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Master Academic Timetable</h1>
+                    <p class="hero-sub-title">View weekly class periods, allocated lecture halls, assigned faculty, and schedules</p>
+                </div>
+                <div class="hero-action-box">
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 border shadow-xs fs-13">
+                        <i class="bi bi-clock-history me-1 text-primary"></i> Mon – Fri Curriculum
+                    </span>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <form id="filterForm" class="row g-2 align-items-center" onsubmit="event.preventDefault(); loadTimetable();">
+                    <div class="col-12 col-md-4">
+                        <select id="filterClass" name="class_id" class="form-select pill-input" onchange="loadTimetable()">
+                            <option value="">All Class Sections</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <select id="filterFaculty" name="faculty_id" class="form-select pill-input" onchange="loadTimetable()">
+                            <option value="">All Faculty</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select id="filterDay" name="day" class="form-select pill-input" onchange="loadTimetable()">
+                            <option value="">All Weekdays</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-navy-pill w-100 justify-content-center">Filter</button>
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" title="Clear Filters" onclick="clearFilters()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TIMETABLE TABLE CARD -->
+            <div class="aesthetic-white-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0" id="timetableHeaderCount">Scheduled Class Slots (0)</h2>
+                    <span class="badge-status-lime">Central Schedule</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Time Interval</th>
+                                <th>Class / Section</th>
+                                <th>Subject</th>
+                                <th>Faculty Member</th>
+                                <th>Classroom</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetableTbody">
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                                    Loading timetable schedules...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+let allClasses = [];
+let allFaculty = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadTimetable();
+});
+
+async function loadTimetable() {
+    const classId = document.getElementById('filterClass').value;
+    const facultyId = document.getElementById('filterFaculty').value;
+    const day = document.getElementById('filterDay').value;
+
+    const query = new URLSearchParams();
+    if (classId) query.set('class_id', classId);
+    if (facultyId) query.set('faculty_id', facultyId);
+    if (day) query.set('day', day);
+
+    try {
+        const data = await AttendEase.apiFetch(`/api/admin/timetable?${query.toString()}`);
+        allClasses = data.classes || [];
+        allFaculty = data.facultyList || [];
+
+        populateDropdowns(data.filters || {});
+        renderTimetable(data.timetableSlots || []);
+    } catch (err) {
+        console.error('Failed to load timetable:', err);
+        AttendEase.showFlash('Failed to load timetable.', 'error');
+    }
+}
+
+function populateDropdowns(filters) {
+    const classSelect = document.getElementById('filterClass');
+    const facultySelect = document.getElementById('filterFaculty');
+
+    const curClass = filters.class_id || classSelect.value;
+    const curFaculty = filters.faculty_id || facultySelect.value;
+    const curDay = filters.day || document.getElementById('filterDay').value;
+
+    classSelect.innerHTML = '<option value="">All Class Sections</option>' +
+        allClasses.map(c => `<option value="${c.id}" ${String(curClass) === String(c.id) ? 'selected' : ''}>${AttendEase.escapeHtml(c.name)}</option>`).join('');
+
+    facultySelect.innerHTML = '<option value="">All Faculty</option>' +
+        allFaculty.map(f => `<option value="${f.id}" ${String(curFaculty) === String(f.id) ? 'selected' : ''}>${AttendEase.escapeHtml(f.full_name)} (${AttendEase.escapeHtml(f.dept_code || '')})</option>`).join('');
+
+    if (curDay) {
+        document.getElementById('filterDay').value = curDay;
+    }
+}
+
+function renderTimetable(slots) {
+    const tbody = document.getElementById('timetableTbody');
+    document.getElementById('timetableHeaderCount').textContent = `Scheduled Class Slots (${slots.length})`;
+
+    if (!slots || slots.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-calendar-x fs-2 d-block mb-2 text-muted opacity-50"></i>
+                    No timetable slots found matching the selected filter criteria.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = slots.map(slot => {
+        const startTime = (slot.start_time || '').substring(0, 5);
+        const endTime = (slot.end_time || '').substring(0, 5);
+
+        return `
+            <tr>
+                <td>
+                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 fw-bold">
+                        ${AttendEase.escapeHtml(slot.day_of_week)}
+                    </span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-1 text-dark fw-semibold">
+                        <i class="bi bi-clock me-1 text-muted"></i>
+                        ${startTime} – ${endTime}
+                    </div>
+                </td>
+                <td>
+                    <span class="badge-pill-soft fw-bold">${AttendEase.escapeHtml(slot.class_name)}</span>
+                </td>
+                <td>
+                    <div>
+                        <span class="badge-pill-soft me-1">${AttendEase.escapeHtml(slot.subject_code)}</span>
+                        <span class="fw-semibold text-dark">${AttendEase.escapeHtml(slot.subject_name)}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="fw-semibold text-dark">${AttendEase.escapeHtml(slot.faculty_name)}</div>
+                </td>
+                <td>
+                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1">
+                        <i class="bi bi-geo-alt me-1 text-danger"></i>${AttendEase.escapeHtml(slot.classroom || 'Room 101')}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function clearFilters() {
+    document.getElementById('filterClass').value = '';
+    document.getElementById('filterFaculty').value = '';
+    document.getElementById('filterDay').value = '';
+    loadTimetable();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="aesthetic-app-body" data-active-page="dashboard">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="My Attendance Dashboard"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO STATS HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Student Dashboard</h1>
+                    <p class="hero-sub-title" id="studentHeroSubtitle">
+                        Loading student enrollment details...
+                    </p>
+                </div>
+
+                <div class="hero-right-stats d-flex flex-wrap align-items-center gap-4">
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Enrolled Subjects</div>
+                        <div class="hero-stat-value" id="statSubjectCount">-</div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Attended / Total</div>
+                        <div class="hero-stat-value" id="statAttendedSessions">- <span class="hero-stat-unit" id="statTotalSessions">/ -</span></div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-label">Overall Rate</div>
+                        <div class="hero-stat-value" id="statOverallRate">-</div>
+                    </div>
+                    <div class="hero-action-box">
+                        <a href="/student/attendance" class="btn btn-navy-pill">
+                            <i class="bi bi-calendar2-check me-2"></i>My Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE WARNING BANNER -->
+            <div id="lowAttendanceBannerBox" style="display:none;" class="aesthetic-alert-banner alert-warning-glow mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="alert-icon-pill bg-danger text-white"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="flex-grow-1">
+                        <h5 class="fw-bold mb-1 text-danger" id="lowBannerTitle">Low Attendance Warning</h5>
+                        <p class="mb-2 fs-13 text-dark" id="lowBannerDesc"></p>
+                        <div class="d-flex flex-wrap gap-2" id="lowBadgesList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN ROW -->
+            <div class="row g-4 mb-4">
+                <!-- LEFT COLUMN -->
+                <div class="col-12 col-xl-4 col-lg-5">
+                    <!-- 1. Mini Calendar Card -->
+                    <div class="aesthetic-calendar-card mb-3">
+                        <div class="calendar-card-header d-flex align-items-center justify-content-between mb-3">
+                            <span class="cal-month-title" id="calMonthTitle">October 2026</span>
+                            <div class="cal-nav-arrows">
+                                <button type="button" class="cal-arrow-btn" onclick="prevMonth()"><i class="bi bi-chevron-left"></i></button>
+                                <button type="button" class="cal-arrow-btn" onclick="nextMonth()"><i class="bi bi-chevron-right"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="calendar-days-row">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <div class="calendar-grid-dates" id="calendarDates"></div>
+                    </div>
+
+                    <!-- 2. Today's Lectures Card -->
+                    <div class="aesthetic-white-card checklist-card mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h2 class="card-section-title mb-0">Today's Schedule</h2>
+                                <small class="text-muted" id="todayDayLabel">Today</small>
+                            </div>
+                            <a href="/student/timetable" class="btn-text-action fs-12">Full Week &rarr;</a>
+                        </div>
+                        <div class="today-lectures-list" id="todayLecturesList">
+                            <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading lectures...</div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Academic Standing Card -->
+                    <div class="aesthetic-white-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Academic Summary</h2>
+                            <span class="badge-status-lime">Enrolled</span>
+                        </div>
+                        <ul class="list-unstyled mb-0 fs-13">
+                            <li class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted">Department</span>
+                                <span class="fw-bold text-dark" id="summaryDept">-</span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted">Section</span>
+                                <span class="fw-bold text-dark" id="summaryClass">-</span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted">Total Classes Conducted</span>
+                                <span class="fw-bold text-dark" id="summaryTotalClasses">0</span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted">Attended (Present + Late)</span>
+                                <span class="fw-bold text-success" id="summaryAttended">0</span>
+                            </li>
+                            <li class="d-flex justify-content-between py-2">
+                                <span class="text-muted">Absences</span>
+                                <span class="fw-bold text-danger" id="summaryAbsent">0</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="col-12 col-xl-8 col-lg-7">
+                    <!-- Subject Analytics Bar Chart Card -->
+                    <div class="aesthetic-white-card mb-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <div>
+                                <h2 class="card-section-title mb-0">Subject Attendance Performance</h2>
+                                <small class="text-muted" id="chartThresholdLabel">Target threshold: 75%</small>
+                            </div>
+                            <a href="/student/attendance" class="btn-text-action">Detailed Breakdown &rarr;</a>
+                        </div>
+                        <div class="chart-canvas-box" style="height:260px; position:relative;">
+                            <canvas id="studentSubjectChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Academic Week Class Schedule Grid Widget -->
+                    <div id="studentScheduleWidgetContainer" class="mb-4"></div>
+
+                    <!-- Recent Attendance Activity Table (Last 5 sessions) -->
+                    <div class="aesthetic-white-card mb-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <div>
+                                <h2 class="card-section-title mb-0">Recent Attendance Logs</h2>
+                                <small class="text-muted">Latest 5 class sessions recorded</small>
+                            </div>
+                            <a href="/student/history" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                View Full History <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Subject</th>
+                                        <th>Faculty</th>
+                                        <th>Topic</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentAttendanceTbody">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading recent attendance...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Subject Summaries Quick Table -->
+                    <div class="aesthetic-white-card">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Enrolled Subjects Quick Status</h2>
+                            <span class="badge-pill-soft" id="quickSubjectCount">0 Subjects</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Faculty</th>
+                                        <th>Attended / Total</th>
+                                        <th>Percentage</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subjectQuickTbody">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading subjects...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/academic_schedule.js"></script>
+<script>
+let subjectChartInstance = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const data = await AttendEase.apiFetch('/api/student/dashboard');
+        renderStudentDashboard(data);
+    } catch (err) {
+        console.error('Error loading student dashboard:', err);
+        AttendEase.showFlash('Failed to load dashboard data.', 'error');
+    }
+});
+
+function renderStudentDashboard(data) {
+    const student = data.student || {};
+    const user = data.user || {};
+    const subjectStats = data.subjectStats || [];
+    const threshold = data.threshold || 75;
+    const overallPct = data.overallPct !== undefined ? data.overallPct : 0;
+    const totalSessions = data.totalSessions || 0;
+    const totalAttended = data.totalAttended || 0;
+    const lowSubjects = data.lowSubjects || [];
+    const todayLectures = data.todayLectures || [];
+    const todayDay = data.todayDay || '';
+    const recentAttendance = data.recentAttendance || [];
+    const weeklySchedule = data.weeklySchedule || [];
+
+    // 1. Subtitle & Hero Stats
+    const subEl = document.getElementById('studentHeroSubtitle');
+    subEl.innerHTML = `Welcome back, <strong>${AttendEase.escapeHtml(user.full_name || user.username)}</strong> &bull; ${AttendEase.escapeHtml(student.department_name || '')} (${AttendEase.escapeHtml(student.class_name || 'Enrolled')}) &bull; Roll: <code>${AttendEase.escapeHtml(student.roll_number || '')}</code>`;
+
+    document.getElementById('statSubjectCount').textContent = subjectStats.length;
+    document.getElementById('statAttendedSessions').innerHTML = `${totalAttended} <span class="hero-stat-unit">/ ${totalSessions}</span>`;
+    
+    const rateEl = document.getElementById('statOverallRate');
+    rateEl.textContent = `${overallPct}%`;
+    rateEl.className = `hero-stat-value ${overallPct < threshold ? 'text-danger' : 'text-lime-glow'}`;
+
+    // 2. Low Attendance Banner
+    const bannerBox = document.getElementById('lowAttendanceBannerBox');
+    if (lowSubjects.length > 0) {
+        bannerBox.style.display = 'block';
+        document.getElementById('lowBannerTitle').textContent = `Low Attendance Warning (${threshold}% Minimum Required)`;
+        document.getElementById('lowBannerDesc').innerHTML = `You are currently falling short in <strong>${lowSubjects.length}</strong> of your enrolled subjects. Attend the next consecutive lectures to restore your safe eligibility status:`;
+        
+        const badgesContainer = document.getElementById('lowBadgesList');
+        badgesContainer.innerHTML = lowSubjects.map(ls => `
+            <span class="badge bg-light text-dark border p-2 fs-12">
+                <strong class="text-danger">${AttendEase.escapeHtml(ls.subject_code)}</strong>: ${ls.pct}% 
+                (${ls.attended}/${ls.total}) &bull; 
+                <span class="text-primary fw-bold">+${ls.neededToPass} sessions needed</span>
+            </span>
+        `).join('');
+    } else {
+        bannerBox.style.display = 'none';
+    }
+
+    // 3. Today's Lectures
+    document.getElementById('todayDayLabel').textContent = todayDay;
+    const todayContainer = document.getElementById('todayLecturesList');
+    if (todayLectures.length > 0) {
+        todayContainer.innerHTML = todayLectures.map(slot => `
+            <div class="p-3 mb-2 rounded-3 border bg-light d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="fw-bold text-dark">${AttendEase.escapeHtml(slot.subject_name)}</div>
+                    <div class="fs-12 text-muted">
+                        <i class="bi bi-clock me-1"></i>${(slot.start_time || '').slice(0,5)} - ${(slot.end_time || '').slice(0,5)} &bull; 
+                        <i class="bi bi-geo-alt ms-1"></i>${AttendEase.escapeHtml(slot.classroom)}
+                    </div>
+                    <div class="fs-12 text-secondary mt-1">
+                        <i class="bi bi-person me-1"></i>${AttendEase.escapeHtml(slot.faculty_name)}
+                    </div>
+                </div>
+                <span class="badge-status-lime fs-11">${AttendEase.escapeHtml(slot.subject_code)}</span>
+            </div>
+        `).join('');
+    } else {
+        todayContainer.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-calendar-x fs-2 d-block mb-1 text-secondary"></i>
+                <span>No lectures scheduled for ${AttendEase.escapeHtml(todayDay)}.</span>
+            </div>
+        `;
+    }
+
+    // 4. Academic Summary Card
+    document.getElementById('summaryDept').textContent = student.department_name || '-';
+    document.getElementById('summaryClass').textContent = student.class_name || '-';
+    document.getElementById('summaryTotalClasses').textContent = totalSessions;
+    document.getElementById('summaryAttended').textContent = totalAttended;
+    document.getElementById('summaryAbsent').textContent = data.totalAbsent || 0;
+
+    // 5. Subject Chart
+    document.getElementById('chartThresholdLabel').textContent = `Target threshold: ${threshold}%`;
+    const chartCanvas = document.getElementById('studentSubjectChart');
+    if (chartCanvas && subjectStats.length > 0) {
+        const labels = subjectStats.map(s => s.subject_code);
+        const pcts   = subjectStats.map(s => s.pct);
+
+        if (subjectChartInstance) subjectChartInstance.destroy();
+        subjectChartInstance = new Chart(chartCanvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: pcts,
+                    backgroundColor: pcts.map(v => v >= threshold ? '#cbf946' : '#ff7675'),
+                    borderColor: pcts.map(v => v >= threshold ? '#a4df14' : '#d63031'),
+                    borderWidth: 1.5,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return `Attendance: ${ctx.parsed.y}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { callback: v => v + '%' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 6. Academic Week Schedule Widget
+    renderAcademicWeekSchedule('studentScheduleWidgetContainer', weeklySchedule, { isFaculty: false });
+
+    // 7. Recent Attendance Activity
+    const recentTbody = document.getElementById('recentAttendanceTbody');
+    if (recentAttendance.length > 0) {
+        recentTbody.innerHTML = recentAttendance.map(r => {
+            let statusBadge = `<span class="badge-status-danger"><i class="bi bi-x-circle me-1"></i>Absent</span>`;
+            if (r.status === 'present') {
+                statusBadge = `<span class="badge-status-lime"><i class="bi bi-check-circle me-1"></i>Present</span>`;
+            } else if (r.status === 'late') {
+                statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Late</span>`;
+            }
+
+            return `
+                <tr>
+                    <td class="text-nowrap">
+                        <i class="bi bi-calendar3 me-1 text-muted"></i>
+                        ${AttendEase.formatDate(r.session_date)}
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border me-1">${AttendEase.escapeHtml(r.subject_code)}</span>
+                        <span class="fw-bold text-dark">${AttendEase.escapeHtml(r.subject_name)}</span>
+                    </td>
+                    <td class="text-secondary fs-13">${AttendEase.escapeHtml(r.faculty_name || '')}</td>
+                    <td class="text-muted fs-13">${AttendEase.escapeHtml(r.topic || 'Regular Lecture')}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        recentTbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No attendance logs recorded yet.</td></tr>`;
+    }
+
+    // 8. Enrolled Subjects Quick Status
+    document.getElementById('quickSubjectCount').textContent = `${subjectStats.length} Subjects`;
+    const quickTbody = document.getElementById('subjectQuickTbody');
+    if (subjectStats.length > 0) {
+        quickTbody.innerHTML = subjectStats.map(s => {
+            const statusHtml = s.pct >= threshold 
+                ? `<span class="badge-status-lime">Eligible</span>`
+                : `<span class="badge-status-danger" title="${s.neededToPass} sessions needed">Shortage (+${s.neededToPass})</span>`;
+
+            return `
+                <tr>
+                    <td>
+                        <div class="fw-bold text-dark">${AttendEase.escapeHtml(s.subject_name)}</div>
+                        <small class="text-muted">${AttendEase.escapeHtml(s.subject_code)} &bull; ${s.credits || 3} Credits</small>
+                    </td>
+                    <td class="fs-13 text-secondary">${AttendEase.escapeHtml(s.faculty_name || '')}</td>
+                    <td><strong>${s.attended}</strong> / ${s.total}</td>
+                    <td style="min-width: 140px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress aesthetic-progress flex-grow-1" style="height: 7px;">
+                                <div class="progress-bar ${s.pct >= threshold ? 'bg-lime-glow' : 'bg-danger'}" style="width: ${s.pct}%;"></div>
+                            </div>
+                            <span class="fw-bold fs-13">${s.pct}%</span>
+                        </div>
+                    </td>
+                    <td>${statusHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        quickTbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No enrolled subjects found.</td></tr>`;
+    }
+
+    renderCalendar();
+}
+
+// Mini Calendar Component
+let currentCalDate = new Date();
+
+function renderCalendar() {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthTitle = document.getElementById('calMonthTitle');
+    if (monthTitle) {
+        monthTitle.textContent = `${monthNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`;
+    }
+    
+    const datesContainer = document.getElementById('calendarDates');
+    if (!datesContainer) return;
+    datesContainer.innerHTML = '';
+
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const startOffset = (firstDay + 6) % 7;
+
+    for (let i = 0; i < startOffset; i++) {
+        const empty = document.createElement('span');
+        empty.className = 'cal-date-empty';
+        datesContainer.appendChild(empty);
+    }
+
+    const today = new Date();
+    for (let day = 1; day <= daysInMonth; day++) {
+        const daySpan = document.createElement('span');
+        daySpan.className = 'cal-date-num';
+        daySpan.textContent = day;
+        if (today.getDate() === day && today.getMonth() === month && today.getFullYear() === year) {
+            daySpan.classList.add('active-lime-circle');
+        }
+        datesContainer.appendChild(daySpan);
+    }
+}
+
+function prevMonth() {
+    currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+    renderCalendar();
+}
+
+function nextMonth() {
+    currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+    renderCalendar();
+}
+</script>
+</body>
+</html>

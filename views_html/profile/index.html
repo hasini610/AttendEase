@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="profile">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Profile & Settings"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Profile & Security</h1>
+                    <p class="hero-sub-title">Manage your personal credentials, contact info, and account security</p>
+                </div>
+                <div class="hero-action-box">
+                    <a href="/" class="btn btn-navy-pill" id="backDashBtn">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- LEFT COLUMN: Profile Overview Card -->
+                <div class="col-12 col-lg-4">
+                    <div class="aesthetic-white-card text-center mb-4">
+                        <div class="avatar-circle mx-auto mb-3" style="width: 72px; height: 72px; font-size: 28px; background: #f7d794;" id="profAvatar">
+                            U
+                        </div>
+                        <h2 class="fs-18 fw-800 text-dark mb-1" id="profFullName">Loading...</h2>
+                        <span class="badge-pill-soft text-capitalize mb-3 d-inline-block" id="profRoleBadge">
+                            <i class="bi bi-shield-check me-1"></i>User
+                        </span>
+
+                        <div class="border-top-subtle pt-3 mt-2 text-start">
+                            <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted fs-13">Username</span>
+                                <span class="fw-bold fs-13 text-dark" id="profUsername">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                                <span class="text-muted fs-13">Email</span>
+                                <span class="fw-bold fs-13 text-dark" id="profEmail">-</span>
+                            </div>
+                            <div id="roleDetailsBox"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Update Forms -->
+                <div class="col-12 col-lg-8">
+                    <!-- 1. Personal Details Form -->
+                    <div class="aesthetic-white-card mb-4">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Personal Details</h2>
+                            <span class="badge-pill-soft">Account Info</span>
+                        </div>
+
+                        <form id="updateProfileForm" method="POST">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">Full Name</label>
+                                    <input type="text" name="full_name" id="inputFullName" class="form-control pill-input" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">Phone Number</label>
+                                    <input type="text" name="phone" id="inputPhone" class="form-control pill-input" placeholder="e.g. 9876543210">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">Email Address</label>
+                                    <input type="email" id="inputEmail" class="form-control pill-input" disabled>
+                                    <small class="text-muted">Protected. Contact admin to change email</small>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">Username</label>
+                                    <input type="text" id="inputUsername" class="form-control pill-input" disabled>
+                                    <small class="text-muted">Protected username identifier</small>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-end">
+                                <button type="submit" class="btn btn-navy-pill" id="saveProfileBtn">
+                                    <i class="bi bi-check2-circle me-1"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 2. Change Password Form -->
+                    <div class="aesthetic-white-card" id="changePassword">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Security & Password</h2>
+                            <span class="badge-status-lime">Encrypted (bcrypt)</span>
+                        </div>
+
+                        <form id="changePasswordForm" method="POST">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fs-13 fw-semibold">Current Password</label>
+                                    <div class="input-container">
+                                        <i class="bi bi-shield-lock input-icon"></i>
+                                        <input type="password" name="current_password" id="inputCurrentPass" class="form-control pill-input" placeholder="Enter your current password" required>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">New Password</label>
+                                    <div class="input-container">
+                                        <i class="bi bi-key input-icon"></i>
+                                        <input type="password" name="new_password" id="inputNewPass" class="form-control pill-input" placeholder="At least 6 characters" minlength="6" required>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fs-13 fw-semibold">Confirm New Password</label>
+                                    <div class="input-container">
+                                        <i class="bi bi-key-fill input-icon"></i>
+                                        <input type="password" name="confirm_password" id="inputConfirmPass" class="form-control pill-input" placeholder="Re-type new password" minlength="6" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-end">
+                                <button type="submit" class="btn btn-navy-pill" id="updatePassBtn">
+                                    <i class="bi bi-lock-fill me-1"></i> Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    let currentRole = 'student';
+
+    async function loadProfile() {
+        try {
+            const data = await AttendEase.apiFetch('/api/profile');
+            const user = data.user;
+            const details = data.roleDetails || {};
+            currentRole = user.role;
+
+            document.getElementById('backDashBtn').href = `/${user.role}/dashboard`;
+            document.getElementById('updateProfileForm').action = `/${user.role}/profile/update`;
+            document.getElementById('changePasswordForm').action = `/${user.role}/profile/change-password`;
+
+            document.getElementById('profAvatar').textContent = (user.full_name || 'U').charAt(0).toUpperCase();
+            document.getElementById('profFullName').textContent = user.full_name || user.username;
+            document.getElementById('profRoleBadge').innerHTML = `<i class="bi bi-shield-check me-1"></i>${AttendEase.escapeHtml(user.role)}`;
+            document.getElementById('profUsername').textContent = user.username;
+            document.getElementById('profEmail').textContent = user.email;
+
+            document.getElementById('inputFullName').value = user.full_name || '';
+            document.getElementById('inputPhone').value = user.phone || '';
+            document.getElementById('inputEmail').value = user.email || '';
+            document.getElementById('inputUsername').value = user.username || '';
+
+            const box = document.getElementById('roleDetailsBox');
+            box.innerHTML = '';
+
+            if (user.role === 'student' && details) {
+                box.innerHTML = `
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Roll Number</span>
+                        <span class="fw-bold fs-13 text-dark"><code>${AttendEase.escapeHtml(details.roll_number || '')}</code></span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Department</span>
+                        <span class="fw-bold fs-13 text-dark">${AttendEase.escapeHtml(details.department_name || '')} (${AttendEase.escapeHtml(details.dept_code || '')})</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Class</span>
+                        <span class="fw-bold fs-13 text-dark">${AttendEase.escapeHtml(details.class_name || 'N/A')}</span>
+                    </div>
+                `;
+            } else if (user.role === 'faculty' && details) {
+                box.innerHTML = `
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Employee ID</span>
+                        <span class="fw-bold fs-13 text-dark"><code>${AttendEase.escapeHtml(details.employee_id || '')}</code></span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Department</span>
+                        <span class="fw-bold fs-13 text-dark">${AttendEase.escapeHtml(details.department_name || '')}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom-subtle">
+                        <span class="text-muted fs-13">Designation</span>
+                        <span class="fw-bold fs-13 text-dark">${AttendEase.escapeHtml(details.designation || 'Lecturer')}</span>
+                    </div>
+                `;
+            }
+        } catch (err) {
+            console.error('Failed to load profile:', err);
+            AttendEase.showFlash('Failed to load profile details.', 'error');
+        }
+    }
+
+    await loadProfile();
+
+    // AJAX Form Handling for Update Profile
+    document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveProfileBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+        try {
+            const full_name = document.getElementById('inputFullName').value.trim();
+            const phone = document.getElementById('inputPhone').value.trim();
+
+            const res = await AttendEase.apiFetch(`/${currentRole}/profile/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: { full_name, phone }
+            });
+
+            AttendEase.showFlash('Profile updated successfully.', 'success');
+            await loadProfile();
+        } catch (err) {
+            AttendEase.showFlash(err.message || 'Could not update profile.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save Changes';
+        }
+    });
+
+    // AJAX Form Handling for Change Password
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const current_password = document.getElementById('inputCurrentPass').value;
+        const new_password = document.getElementById('inputNewPass').value;
+        const confirm_password = document.getElementById('inputConfirmPass').value;
+
+        if (new_password !== confirm_password) {
+            AttendEase.showFlash('New passwords do not match.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('updatePassBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+
+        try {
+            await AttendEase.apiFetch(`/${currentRole}/profile/change-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: { current_password, new_password, confirm_password }
+            });
+
+            AttendEase.showFlash('Password changed successfully!', 'success');
+            document.getElementById('changePasswordForm').reset();
+        } catch (err) {
+            AttendEase.showFlash(err.message || 'Server error while changing password.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Update Password';
+        }
+    });
+});
+</script>
+</body>
+</html>

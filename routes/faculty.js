@@ -8,6 +8,7 @@ const profileController = require('../controllers/profileController');
 // All faculty routes require login + faculty role
 router.use(isLoggedIn, isFaculty);
 
+// ---- HTML Page Routes ----
 // 1. Dashboard
 router.get('/dashboard', facultyController.dashboard);
 
@@ -35,5 +36,15 @@ router.get('/reports/export', facultyController.exportCsv);
 router.get('/profile',                  profileController.showProfile);
 router.post('/profile/update',          profileController.updateProfile);
 router.post('/profile/change-password', profileController.changePassword);
+
+// ---- API JSON Routes (same controllers, wantsJson() detects /api prefix) ----
+router.get('/api/dashboard',           facultyController.dashboard);
+router.get('/api/timetable',           facultyController.timetable);
+router.get('/api/sessions',            facultyController.listSessions);
+router.get('/api/mark',                facultyController.showMarkAttendance);
+router.get('/api/mark/:sessionId',     facultyController.showMarkAttendance);
+router.get('/api/history',             facultyController.attendanceHistory);
+router.get('/api/history/:sessionId',  facultyController.sessionDetails);
+router.get('/api/reports',             facultyController.attendanceReports);
 
 module.exports = router;

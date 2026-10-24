@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Timetable - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="timetable">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="My Class Schedule"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">My Class Timetable</h1>
+                    <p class="hero-sub-title" id="ttSubtitle">
+                        Weekly lecture schedule for loading...
+                    </p>
+                </div>
+                <div class="hero-action-box">
+                    <a href="/student/dashboard" class="btn btn-navy-pill">
+                        <i class="bi bi-grid-fill me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- WEEKDAY FILTER BUTTONS & SECTION INFO -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-2" id="dayFilterBtns">
+                        <span class="fs-13 fw-bold text-dark me-2"><i class="bi bi-funnel me-1"></i>Filter Day:</span>
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 filter-day-btn" data-day="">All Days</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn" data-day="Monday">Monday</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn" data-day="Tuesday">Tuesday</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn" data-day="Wednesday">Wednesday</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn" data-day="Thursday">Thursday</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn" data-day="Friday">Friday</button>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark border p-2 fs-13" id="sectionBadge">
+                            <i class="bi bi-building me-1 text-primary"></i>Section: <strong>-</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIMETABLE LIST / GRID -->
+            <div class="row g-4" id="timetableGridContainer">
+                <div class="col-12 text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Loading timetable slots...</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    let selectedDay = urlParams.get('day') || '';
+
+    // Update active filter button
+    function updateFilterButtons(day) {
+        document.querySelectorAll('.filter-day-btn').forEach(btn => {
+            if (btn.getAttribute('data-day') === day) {
+                btn.className = 'btn btn-sm btn-primary rounded-pill px-3 filter-day-btn';
+            } else {
+                btn.className = 'btn btn-sm btn-outline-secondary rounded-pill px-3 filter-day-btn';
+            }
+        });
+    }
+
+    async function loadTimetable(day = '') {
+        try {
+            const query = day ? `?day=${encodeURIComponent(day)}` : '';
+            const data = await AttendEase.apiFetch(`/api/student/timetable${query}`);
+            renderTimetable(data, day);
+        } catch (err) {
+            console.error('Failed to load timetable:', err);
+            AttendEase.showFlash('Failed to load timetable.', 'error');
+        }
+    }
+
+    function renderTimetable(data, currentFilterDay) {
+        const student = data.student || {};
+        const slots = data.timetableSlots || [];
+
+        document.getElementById('ttSubtitle').innerHTML = `Weekly lecture schedule for <strong>${AttendEase.escapeHtml(student.class_name || '')}</strong> &bull; ${AttendEase.escapeHtml(student.department_name || '')}`;
+        document.getElementById('sectionBadge').innerHTML = `<i class="bi bi-building me-1 text-primary"></i>Section: <strong>${AttendEase.escapeHtml(student.class_name || '')}</strong>`;
+
+        const daysList = currentFilterDay ? [currentFilterDay] : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const grid = document.getElementById('timetableGridContainer');
+        grid.innerHTML = '';
+
+        let totalSlotsCount = 0;
+
+        daysList.forEach(day => {
+            const daySlots = slots.filter(s => s.day_of_week === day);
+            totalSlotsCount += daySlots.length;
+
+            const colDiv = document.createElement('div');
+            colDiv.className = `col-12 ${currentFilterDay ? 'col-lg-12' : 'col-xl-6'}`;
+
+            let slotsHtml = '';
+            if (daySlots.length > 0) {
+                slotsHtml = `
+                    <div class="timeline-slot-list">
+                        ${daySlots.map(slot => `
+                            <div class="p-3 mb-3 rounded-3 border bg-light position-relative">
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <span class="badge bg-primary text-white me-2">${AttendEase.escapeHtml(slot.subject_code)}</span>
+                                        <strong class="fs-15 text-dark">${AttendEase.escapeHtml(slot.subject_name)}</strong>
+                                    </div>
+                                    <div class="badge bg-white text-dark border px-2 py-1 fs-12">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>${AttendEase.escapeHtml(slot.classroom)}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top fs-13 text-secondary">
+                                    <div>
+                                        <i class="bi bi-clock-fill text-primary me-1"></i>
+                                        <strong>${(slot.start_time || '').slice(0,5)} - ${(slot.end_time || '').slice(0,5)}</strong>
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-person-badge text-muted me-1"></i>
+                                        ${AttendEase.escapeHtml(slot.faculty_name || '')}
+                                        ${slot.designation ? `<span class="text-muted fs-12">(${AttendEase.escapeHtml(slot.designation)})</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                slotsHtml = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-cup-hot fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        <p class="mb-0">No classes scheduled on ${AttendEase.escapeHtml(day)}.</p>
+                    </div>
+                `;
+            }
+
+            colDiv.innerHTML = `
+                <div class="aesthetic-white-card h-100">
+                    <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-circle" style="width:36px; height:36px; font-size:14px; background:#e8eaf6; color:#3949ab;">
+                                <i class="bi bi-calendar-event"></i>
+                            </div>
+                            <div>
+                                <h2 class="card-section-title mb-0">${AttendEase.escapeHtml(day)}</h2>
+                                <small class="text-muted">${daySlots.length} Lecture${daySlots.length === 1 ? '' : 's'}</small>
+                            </div>
+                        </div>
+                        <span class="badge-status-lime fs-12">${daySlots.length} Slots</span>
+                    </div>
+                    ${slotsHtml}
+                </div>
+            `;
+            grid.appendChild(colDiv);
+        });
+
+        if (totalSlotsCount === 0) {
+            grid.innerHTML = `
+                <div class="col-12">
+                    <div class="aesthetic-white-card text-center py-5">
+                        <i class="bi bi-calendar-x fs-1 text-muted mb-3 d-block"></i>
+                        <h4 class="text-dark">No Timetable Slots Found</h4>
+                        <p class="text-muted">No timetable schedule has been mapped to your section (${AttendEase.escapeHtml(student.class_name || '')}) yet.</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // Attach click listeners to filter buttons
+    document.querySelectorAll('.filter-day-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const day = btn.getAttribute('data-day');
+            updateFilterButtons(day);
+            const newUrl = day ? `/student/timetable?day=${encodeURIComponent(day)}` : '/student/timetable';
+            window.history.pushState({}, document.title, newUrl);
+            loadTimetable(day);
+        });
+    });
+
+    updateFilterButtons(selectedDay);
+    await loadTimetable(selectedDay);
+});
+</script>
+</body>
+</html>

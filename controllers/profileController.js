@@ -41,21 +41,23 @@ const profileController = {
                 [user.id]
             );
 
-            res.render('profile/index', {
-                title: 'My Profile - AttendEase',
-                pageTitle: 'Profile & Settings',
-                activePage: 'profile',
-                user,
-                roleDetails,
-                notifCount: notifRow ? notifRow.c : 0,
-                flash: {
-                    success: req.flash('success'),
-                    error: req.flash('error')
-                }
-            });
+            if (req.xhr || req.headers.accept?.includes('application/json') || req.path.startsWith('/api')) {
+                return res.json({
+                    success: true,
+                    user,
+                    roleDetails,
+                    notifCount: notifRow ? notifRow.c : 0
+                });
+            }
+
+            const path = require('path');
+            res.sendFile(path.join(__dirname, '../views_html/profile/index.html'));
 
         } catch (err) {
             console.error('Profile view error:', err);
+            if (req.xhr || req.headers.accept?.includes('application/json') || req.path.startsWith('/api')) {
+                return res.status(500).json({ success: false, message: 'Could not load profile.' });
+            }
             req.flash('error', 'Could not load profile.');
             res.redirect(`/${req.session.user.role}/dashboard`);
         }
@@ -66,6 +68,7 @@ const profileController = {
         const { full_name, phone } = req.body;
         const userId = req.session.user.id;
         const role = req.session.user.role;
+        const isJson = req.xhr || req.headers.accept?.includes('application/json') || req.is('json');
 
         try {
             await db.query(
@@ -76,10 +79,17 @@ const profileController = {
             // Update session
             req.session.user.full_name = full_name.trim();
 
+            if (isJson) {
+                return res.json({ success: true, message: 'Profile updated successfully.' });
+            }
+
             req.flash('success', 'Profile updated successfully.');
             res.redirect(`/${role}/profile`);
         } catch (err) {
             console.error('Profile update error:', err);
+            if (isJson) {
+                return res.status(500).json({ success: false, message: 'Could not update profile.' });
+            }
             req.flash('error', 'Could not update profile.');
             res.redirect(`/${role}/profile`);
         }
@@ -90,19 +100,26 @@ const profileController = {
         const { current_password, new_password, confirm_password } = req.body;
         const userId = req.session.user.id;
         const role = req.session.user.role;
+        const isJson = req.xhr || req.headers.accept?.includes('application/json') || req.is('json');
 
         if (!current_password || !new_password || !confirm_password) {
-            req.flash('error', 'All password fields are required.');
+            const msg = 'All password fields are required.';
+            if (isJson) return res.status(400).json({ success: false, message: msg });
+            req.flash('error', msg);
             return res.redirect(`/${role}/profile`);
         }
 
         if (new_password !== confirm_password) {
-            req.flash('error', 'New passwords do not match.');
+            const msg = 'New passwords do not match.';
+            if (isJson) return res.status(400).json({ success: false, message: msg });
+            req.flash('error', msg);
             return res.redirect(`/${role}/profile`);
         }
 
         if (new_password.length < 6) {
-            req.flash('error', 'New password must be at least 6 characters.');
+            const msg = 'New password must be at least 6 characters.';
+            if (isJson) return res.status(400).json({ success: false, message: msg });
+            req.flash('error', msg);
             return res.redirect(`/${role}/profile`);
         }
 
@@ -111,19 +128,27 @@ const profileController = {
 
             const match = await bcrypt.compare(current_password, user.password);
             if (!match) {
-                req.flash('error', 'Current password is incorrect.');
+                const msg = 'Current password is incorrect.';
+                if (isJson) return res.status(400).json({ success: false, message: msg });
+                req.flash('error', msg);
                 return res.redirect(`/${role}/profile`);
             }
 
             const hashed = await bcrypt.hash(new_password, 10);
             await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
 
+            if (isJson) {
+                return res.json({ success: true, message: 'Password changed successfully!' });
+            }
+
             req.flash('success', 'Password changed successfully!');
             res.redirect(`/${role}/profile`);
 
         } catch (err) {
             console.error('Change password error:', err);
-            req.flash('error', 'Server error while changing password.');
+            const msg = 'Server error while changing password.';
+            if (isJson) return res.status(500).json({ success: false, message: msg });
+            req.flash('error', msg);
             res.redirect(`/${role}/profile`);
         }
     }

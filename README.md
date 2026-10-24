@@ -49,10 +49,10 @@
 |--------------|-----------------------------------------------------|
 | Runtime      | Node.js                                             |
 | Framework    | Express.js                                          |
-| Templating   | EJS                                                 |
+| Frontend     | HTML5, Bootstrap 5, Vanilla JavaScript              |
 | Database     | MySQL 8+ (via mysql2)                               |
 | Sessions     | express-session + express-mysql-session             |
-| Auth         | bcrypt                                              |
+| Auth         | bcryptjs                                            |
 | UI           | Bootstrap 5, Bootstrap Icons                        |
 | Charts       | Chart.js                                            |
 | Misc         | connect-flash, method-override, dotenv              |
@@ -131,18 +131,19 @@ Open http://localhost:3000 in your browser.
 
 ```
 attendease/
-├── app.js                      # Express entry point
+├── app.js                      # Express entry point & API route mounts
 ├── config/db.js                # MySQL connection pool
-├── controllers/                # Business logic per module
-├── middleware/auth.js          # RBAC guards
-├── routes/                     # Express route definitions
-├── views/                      # EJS templates (admin, faculty, student, partials)
-├── public/css/style.css        # Custom styles
+├── controllers/                # Dual HTML/JSON controllers per module
+├── middleware/auth.js          # RBAC authentication & authorization guards
+├── routes/                     # Express HTML page and /api/* route definitions
+├── views_html/                 # Plain HTML5 views (admin, faculty, student, auth, profile)
+├── public/js/                  # Vanilla JS API client, dynamic layouts, schedule components
+├── public/css/style.css        # Premium custom styles & tokens
 ├── database/                   # SQL schema and seed files
-├── test_phase3_admin.js        # Admin tests (66)
-├── test_phase4_faculty.js      # Faculty tests (49)
-├── test_phase5_student.js      # Student tests (59)
-├── test_phase6_reports.js      # Reports tests (59)
+├── test_phase3_admin.js        # Admin tests
+├── test_phase4_faculty.js      # Faculty tests
+├── test_phase5_student.js      # Student tests
+├── test_phase6_reports.js      # Reports tests
 ├── .env.example                # Environment template
 └── package.json
 ```

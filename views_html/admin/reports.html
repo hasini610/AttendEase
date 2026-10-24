@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Reports &amp; Analytics - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="aesthetic-app-body" data-active-page="reports">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Attendance Reports &amp; Analytics"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title">Attendance Reports &amp; Analytics</h1>
+                    <p class="hero-sub-title">
+                        College-wide attendance intelligence &bull; Attendance % = (Present + Late) / Total &times; 100 &bull; Threshold: <strong id="heroThreshold">75%</strong>
+                    </p>
+                </div>
+                <div class="hero-action-box d-flex gap-2">
+                    <a href="/admin/reports/low-attendance" id="btnLowAttendance" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Low Attendance
+                    </a>
+                    <a href="/admin/reports/export" id="btnExportCsv" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS CARD -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0"><i class="bi bi-funnel me-2"></i>Filters</h2>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="clearFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                    </button>
+                </div>
+                <form id="filterForm" class="row g-3" onsubmit="event.preventDefault(); loadReports();">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Department</label>
+                        <select id="filterDept" name="dept_id" class="form-select pill-input fs-13" onchange="loadReports()">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Class / Section</label>
+                        <select id="filterClass" name="class_id" class="form-select pill-input fs-13" onchange="loadReports()">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Subject</label>
+                        <select id="filterSubject" name="subject_id" class="form-select pill-input fs-13" onchange="loadReports()">
+                            <option value="">All Subjects</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">Faculty</label>
+                        <select id="filterFaculty" name="faculty_id" class="form-select pill-input fs-13" onchange="loadReports()">
+                            <option value="">All Faculty</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <label class="form-label fs-12 fw-bold text-muted">From</label>
+                        <input type="date" id="filterDateFrom" name="date_from" class="form-control pill-input fs-13" onchange="loadReports()">
+                    </div>
+                    <div class="col-6 col-md-1">
+                        <label class="form-label fs-12 fw-bold text-muted">To</label>
+                        <input type="date" id="filterDateTo" name="date_to" class="form-control pill-input fs-13" onchange="loadReports()">
+                    </div>
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-navy-pill w-100">
+                            <i class="bi bi-search me-1"></i>Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- OVERALL METRICS ROW -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Overall Rate</div>
+                        <div class="fs-28 fw-800 mb-0" id="metricOverallRate">-</div>
+                        <div class="text-muted fs-11" id="metricRateHealth">-</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Total Records</div>
+                        <div class="fs-28 fw-800 text-dark mb-0" id="metricTotalRecords">-</div>
+                        <div class="text-muted fs-11">Attendance marks</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Attended</div>
+                        <div class="fs-28 fw-800 text-success mb-0" id="metricAttended">-</div>
+                        <div class="text-muted fs-11" id="metricAttendedBreakdown">-</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="aesthetic-white-card p-3 text-center">
+                        <div class="text-muted fs-11 fw-bold text-uppercase mb-1">Absences</div>
+                        <div class="fs-28 fw-800 text-danger mb-0" id="metricAbsences">-</div>
+                        <div class="text-muted fs-11">Missed lectures</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS ROW 1 (Status Donut + Trend Line) -->
+            <div class="row g-4 mb-4">
+                <!-- Doughnut – Status Distribution -->
+                <div class="col-12 col-lg-4">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Attendance Status</h2>
+                            <span class="badge-pill-soft fs-12">Distribution</span>
+                        </div>
+                        <div class="position-relative d-flex justify-content-center" style="height:200px;" id="donutContainer">
+                            <canvas id="statusDonut"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-around pt-3 fs-12 text-center" id="donutSummary">
+                            <div><span class="d-block fw-800 text-success fs-16" id="donutPresent">0</span>Present</div>
+                            <div><span class="d-block fw-800 text-warning fs-16" id="donutLate">0</span>Late</div>
+                            <div><span class="d-block fw-800 text-danger fs-16" id="donutAbsent">0</span>Absent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Line – Attendance Trend -->
+                <div class="col-12 col-lg-8">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <div>
+                                <h2 class="card-section-title mb-0">Attendance Trend</h2>
+                                <small class="text-muted">Last 14 session dates (matching filter)</small>
+                            </div>
+                            <span class="badge-pill-soft fs-12">Trend Line</span>
+                        </div>
+                        <div style="height:220px; position:relative;" id="trendContainer">
+                            <canvas id="trendLine"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS ROW 2 (Department & Section Comparison) -->
+            <div class="row g-4 mb-4">
+                <!-- Department Bar -->
+                <div class="col-12 col-lg-6">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Department Comparison</h2>
+                            <span class="badge-pill-soft fs-12">Bar Chart</span>
+                        </div>
+                        <div style="height:220px; position:relative;" id="deptBarContainer">
+                            <canvas id="deptBar"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Bar -->
+                <div class="col-12 col-lg-6">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Section Comparison</h2>
+                            <span class="badge-pill-soft fs-12">Bar Chart</span>
+                        </div>
+                        <div style="height:220px; position:relative;" id="classBarContainer">
+                            <canvas id="classBar"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBJECT-WISE BAR + TABLE -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-5">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0">Subject Attendance</h2>
+                            <span class="badge-pill-soft fs-12">Horizontal Bar</span>
+                        </div>
+                        <div style="height:280px; position:relative;" id="subjectBarContainer">
+                            <canvas id="subjectBar"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-7">
+                    <div class="aesthetic-white-card h-100">
+                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                            <h2 class="card-section-title mb-0" id="subjectTableCount">Subject Breakdown (0)</h2>
+                        </div>
+                        <div class="table-responsive" style="max-height: 320px; overflow-y:auto;">
+                            <table class="table aesthetic-table align-middle mb-0">
+                                <thead class="sticky-top bg-white">
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center text-success">Present</th>
+                                        <th class="text-center text-warning">Late</th>
+                                        <th class="text-center text-danger">Absent</th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subjectStatsTbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading subjects...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION TABLE -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0" id="sectionTableCount">Section-wise Breakdown (0)</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center text-success">Present</th>
+                                <th class="text-center text-warning">Late</th>
+                                <th class="text-center text-danger">Absent</th>
+                                <th>Attendance Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classStatsTbody">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Loading sections...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LOW ATTENDANCE STUDENTS PREVIEW -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom-subtle">
+                    <div>
+                        <h2 class="card-section-title mb-0 text-danger" id="lowStudentsHeader">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Students Below 75% Threshold
+                        </h2>
+                        <small class="text-muted" id="lowStudentsSubtitle">Showing at-risk students</small>
+                    </div>
+                    <a href="/admin/reports/low-attendance" id="linkViewAllLow" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                        View All &rarr;
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th>Sessions Needed*</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowStudentsTbody">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">Loading at-risk students...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+let chartDonut = null;
+let chartTrend = null;
+let chartDept = null;
+let chartClass = null;
+let chartSubject = null;
+let currentThreshold = 75;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Populate filters from current URL query
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dept_id')) document.getElementById('filterDept').value = params.get('dept_id');
+    if (params.get('class_id')) document.getElementById('filterClass').value = params.get('class_id');
+    if (params.get('subject_id')) document.getElementById('filterSubject').value = params.get('subject_id');
+    if (params.get('faculty_id')) document.getElementById('filterFaculty').value = params.get('faculty_id');
+    if (params.get('date_from')) document.getElementById('filterDateFrom').value = params.get('date_from');
+    if (params.get('date_to')) document.getElementById('filterDateTo').value = params.get('date_to');
+
+    loadReports();
+});
+
+async function loadReports() {
+    const dept_id = document.getElementById('filterDept').value;
+    const class_id = document.getElementById('filterClass').value;
+    const subject_id = document.getElementById('filterSubject').value;
+    const faculty_id = document.getElementById('filterFaculty').value;
+    const date_from = document.getElementById('filterDateFrom').value;
+    const date_to = document.getElementById('filterDateTo').value;
+
+    const query = new URLSearchParams();
+    if (dept_id) query.set('dept_id', dept_id);
+    if (class_id) query.set('class_id', class_id);
+    if (subject_id) query.set('subject_id', subject_id);
+    if (faculty_id) query.set('faculty_id', faculty_id);
+    if (date_from) query.set('date_from', date_from);
+    if (date_to) query.set('date_to', date_to);
+
+    const qStr = query.toString();
+
+    // Update Action Links
+    document.getElementById('btnLowAttendance').href = `/admin/reports/low-attendance${qStr ? '?' + qStr : ''}`;
+    document.getElementById('linkViewAllLow').href = `/admin/reports/low-attendance${qStr ? '?' + qStr : ''}`;
+    document.getElementById('btnExportCsv').href = `/admin/reports/export${qStr ? '?' + qStr : ''}`;
+
+    try {
+        const data = await AttendEase.apiFetch(`/api/admin/reports?${qStr}`);
+        currentThreshold = data.threshold || 75;
+        document.getElementById('heroThreshold').textContent = `${currentThreshold}%`;
+
+        populateFilterOptions(data.filterOptions || {}, data.filters || {});
+        renderOverallMetrics(data.overall || {});
+        renderDonutChart(data.overall || {});
+        renderTrendChart(data.trendData || { labels: [], values: [] });
+        renderDeptChart(data.deptStats || []);
+        renderClassChart(data.classStats || []);
+        renderSubjectChart(data.subjectStats || []);
+        renderSubjectTable(data.subjectStats || []);
+        renderClassTable(data.classStats || []);
+        renderLowAttendancePreview(data.lowRows || []);
+    } catch (err) {
+        console.error('Failed to load reports:', err);
+        AttendEase.showFlash('Failed to load attendance analytics.', 'error');
+    }
+}
+
+function populateFilterOptions(options, selected) {
+    const depts = options.departments || [];
+    const classes = options.classes || [];
+    const subjects = options.subjects || [];
+    const faculty = options.facultyList || [];
+
+    const deptSelect = document.getElementById('filterDept');
+    const classSelect = document.getElementById('filterClass');
+    const subjectSelect = document.getElementById('filterSubject');
+    const facultySelect = document.getElementById('filterFaculty');
+
+    const sDept = selected.dept_id || deptSelect.value;
+    const sClass = selected.class_id || classSelect.value;
+    const sSubject = selected.subject_id || subjectSelect.value;
+    const sFaculty = selected.faculty_id || facultySelect.value;
+
+    deptSelect.innerHTML = '<option value="">All Departments</option>' +
+        depts.map(d => `<option value="${d.id}" ${String(sDept) === String(d.id) ? 'selected' : ''}>${AttendEase.escapeHtml(d.code)} – ${AttendEase.escapeHtml(d.name)}</option>`).join('');
+
+    classSelect.innerHTML = '<option value="">All Sections</option>' +
+        classes.map(c => `<option value="${c.id}" ${String(sClass) === String(c.id) ? 'selected' : ''}>${AttendEase.escapeHtml(c.dept_code || '')} – ${AttendEase.escapeHtml(c.name)}</option>`).join('');
+
+    subjectSelect.innerHTML = '<option value="">All Subjects</option>' +
+        subjects.map(s => `<option value="${s.id}" ${String(sSubject) === String(s.id) ? 'selected' : ''}>${AttendEase.escapeHtml(s.code)} – ${AttendEase.escapeHtml(s.name)}</option>`).join('');
+
+    facultySelect.innerHTML = '<option value="">All Faculty</option>' +
+        faculty.map(f => `<option value="${f.id}" ${String(sFaculty) === String(f.id) ? 'selected' : ''}>${AttendEase.escapeHtml(f.full_name)}</option>`).join('');
+}
+
+function renderOverallMetrics(overall) {
+    const pct = overall.pct || 0;
+    const total = overall.total || 0;
+    const attended = overall.attended || 0;
+    const present = overall.present_count || 0;
+    const late = overall.late_count || 0;
+    const absent = overall.absent_count || 0;
+
+    const rateEl = document.getElementById('metricOverallRate');
+    rateEl.textContent = `${pct}%`;
+    rateEl.className = `fs-28 fw-800 mb-0 ${pct >= currentThreshold ? 'text-success' : 'text-danger'}`;
+
+    document.getElementById('metricRateHealth').textContent = pct >= currentThreshold ? 'College-wide healthy' : 'Below target threshold';
+    document.getElementById('metricTotalRecords').textContent = Number(total).toLocaleString();
+    document.getElementById('metricAttended').textContent = Number(attended).toLocaleString();
+    document.getElementById('metricAttendedBreakdown').textContent = `${present} Present • ${late} Late`;
+    document.getElementById('metricAbsences').textContent = Number(absent).toLocaleString();
+}
+
+function renderDonutChart(overall) {
+    const present = overall.present_count || 0;
+    const late = overall.late_count || 0;
+    const absent = overall.absent_count || 0;
+    const total = overall.total || 0;
+
+    document.getElementById('donutPresent').textContent = present.toLocaleString();
+    document.getElementById('donutLate').textContent = late.toLocaleString();
+    document.getElementById('donutAbsent').textContent = absent.toLocaleString();
+
+    const ctx = document.getElementById('statusDonut');
+    if (!ctx) return;
+    if (chartDonut) chartDonut.destroy();
+
+    if (total === 0) {
+        document.getElementById('donutContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-pie-chart fs-1 d-block mb-2"></i>No data for current filters.</div>`;
+        return;
+    }
+
+    chartDonut = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Present', 'Late', 'Absent'],
+            datasets: [{
+                data: [present, late, absent],
+                backgroundColor: ['#cbf946', '#ffd32a', '#ff7675'],
+                borderWidth: 0,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            cutout: '72%'
+        }
+    });
+}
+
+function renderTrendChart(trend) {
+    const ctx = document.getElementById('trendLine');
+    if (!ctx) return;
+    if (chartTrend) chartTrend.destroy();
+
+    if (!trend.labels || trend.labels.length === 0) {
+        document.getElementById('trendContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-graph-up fs-1 d-block mb-2"></i>No trend data for current filters.</div>`;
+        return;
+    }
+
+    chartTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trend.labels,
+            datasets: [{
+                label: 'Attendance %',
+                data: trend.values,
+                borderColor: '#28234d',
+                backgroundColor: 'rgba(203, 249, 70, 0.25)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointBackgroundColor: '#cbf946',
+                pointBorderColor: '#28234d',
+                pointRadius: 4
+            }, {
+                label: `${currentThreshold}% Target`,
+                data: Array(trend.labels.length).fill(currentThreshold),
+                borderColor: '#cbf946',
+                borderDash: [5, 4],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true } },
+            scales: {
+                y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderDeptChart(deptStats) {
+    const ctx = document.getElementById('deptBar');
+    if (!ctx) return;
+    if (chartDept) chartDept.destroy();
+
+    if (!deptStats || deptStats.length === 0) {
+        document.getElementById('deptBarContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-bar-chart fs-1 d-block mb-2"></i>No department data.</div>`;
+        return;
+    }
+
+    const data = deptStats.map(d => d.pct);
+    chartDept = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: deptStats.map(d => d.dept_code),
+            datasets: [{
+                label: 'Attendance %',
+                data: data,
+                backgroundColor: data.map(v => v >= currentThreshold ? '#cbf946' : '#ff7675'),
+                borderColor: data.map(v => v >= currentThreshold ? '#a4df14' : '#d63031'),
+                borderWidth: 1.5,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderClassChart(classStats) {
+    const ctx = document.getElementById('classBar');
+    if (!ctx) return;
+    if (chartClass) chartClass.destroy();
+
+    if (!classStats || classStats.length === 0) {
+        document.getElementById('classBarContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-bar-chart fs-1 d-block mb-2"></i>No section data.</div>`;
+        return;
+    }
+
+    const data = classStats.map(c => c.pct);
+    chartClass = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: classStats.map(c => `${c.dept_code}-${c.class_name}`),
+            datasets: [{
+                label: 'Attendance %',
+                data: data,
+                backgroundColor: data.map(v => v >= currentThreshold ? '#cbf946' : '#ff7675'),
+                borderColor: data.map(v => v >= currentThreshold ? '#a4df14' : '#d63031'),
+                borderWidth: 1.5,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+function renderSubjectChart(subjectStats) {
+    const ctx = document.getElementById('subjectBar');
+    if (!ctx) return;
+    if (chartSubject) chartSubject.destroy();
+
+    if (!subjectStats || subjectStats.length === 0) {
+        document.getElementById('subjectBarContainer').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-book fs-1 d-block mb-2"></i>No subject data.</div>`;
+        return;
+    }
+
+    const data = subjectStats.map(s => s.pct);
+    chartSubject = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: subjectStats.map(s => s.subject_code),
+            datasets: [{
+                label: 'Attendance %',
+                data: data,
+                backgroundColor: data.map(v => v >= currentThreshold ? '#cbf946' : '#ff7675'),
+                borderColor: data.map(v => v >= currentThreshold ? '#a4df14' : '#d63031'),
+                borderWidth: 1.5,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function renderSubjectTable(subjects) {
+    const tbody = document.getElementById('subjectStatsTbody');
+    document.getElementById('subjectTableCount').textContent = `Subject Breakdown (${subjects.length})`;
+
+    if (!subjects || subjects.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No records for current filters.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = subjects.map(s => `
+        <tr>
+            <td>
+                <span class="badge bg-light text-dark border me-1">${AttendEase.escapeHtml(s.subject_code)}</span>
+                <span class="fs-13 fw-bold">${AttendEase.escapeHtml(s.subject_name)}</span>
+            </td>
+            <td class="text-center fw-bold">${Number(s.total).toLocaleString()}</td>
+            <td class="text-center text-success fw-bold">${s.present_count}</td>
+            <td class="text-center text-warning fw-bold">${s.late_count}</td>
+            <td class="text-center text-danger fw-bold">${s.absent_count}</td>
+            <td style="min-width:120px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="progress aesthetic-progress flex-grow-1" style="height:6px;">
+                        <div class="progress-bar ${s.pct >= currentThreshold ? 'bg-lime-glow' : 'bg-danger'}" style="width:${s.pct}%"></div>
+                    </div>
+                    <span class="fw-bold fs-12">${s.pct}%</span>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderClassTable(classes) {
+    const tbody = document.getElementById('classStatsTbody');
+    document.getElementById('sectionTableCount').textContent = `Section-wise Breakdown (${classes.length})`;
+
+    if (!classes || classes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No records for current filters.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = classes.map(c => `
+        <tr>
+            <td><span class="badge bg-light text-dark border">${AttendEase.escapeHtml(c.dept_code)}</span></td>
+            <td class="fw-bold text-dark">${AttendEase.escapeHtml(c.class_name)}</td>
+            <td class="text-center">${Number(c.total).toLocaleString()}</td>
+            <td class="text-center text-success fw-bold">${c.present_count}</td>
+            <td class="text-center text-warning fw-bold">${c.late_count}</td>
+            <td class="text-center text-danger fw-bold">${c.absent_count}</td>
+            <td style="min-width:150px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                        <div class="progress-bar ${c.pct >= currentThreshold ? 'bg-lime-glow' : 'bg-danger'}" style="width:${c.pct}%"></div>
+                    </div>
+                    <span class="fw-bold fs-13">${c.pct}%</span>
+                </div>
+            </td>
+            <td>
+                <span class="${c.pct >= currentThreshold ? 'badge-status-lime' : 'badge-status-danger'}">
+                    ${c.pct >= currentThreshold ? 'Healthy' : 'Low'}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderLowAttendancePreview(lowRows) {
+    const tbody = document.getElementById('lowStudentsTbody');
+    document.getElementById('lowStudentsHeader').innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Students Below ${currentThreshold}% Threshold`;
+    document.getElementById('lowStudentsSubtitle').textContent = `Showing up to 10 of ${lowRows.length} student(s) at risk`;
+
+    if (!lowRows || lowRows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-success"><i class="bi bi-check-circle-fill me-1"></i>All students meet the ${currentThreshold}% attendance threshold.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = lowRows.slice(0, 10).map(r => {
+        const t = Number(r.total) || 0;
+        const a = Number(r.attended) || 0;
+        const needed = t > 0 ? Math.max(0, Math.ceil((0.75 * t - a) / 0.25)) : 0;
+
+        return `
+            <tr>
+                <td><code>${AttendEase.escapeHtml(r.roll_number)}</code></td>
+                <td class="fw-bold text-dark">${AttendEase.escapeHtml(r.full_name)}</td>
+                <td><span class="badge bg-light text-dark border">${AttendEase.escapeHtml(r.dept_code)}</span></td>
+                <td>${AttendEase.escapeHtml(r.class_name)}</td>
+                <td class="text-center"><strong>${a}</strong> / ${t}</td>
+                <td style="min-width:140px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                            <div class="progress-bar bg-danger" style="width:${r.pct}%"></div>
+                        </div>
+                        <span class="text-danger fw-800 fs-13">${r.pct}%</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-12 py-1">+${needed} classes</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function clearFilters() {
+    document.getElementById('filterDept').value = '';
+    document.getElementById('filterClass').value = '';
+    document.getElementById('filterSubject').value = '';
+    document.getElementById('filterFaculty').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    loadReports();
+}
+</script>
+</body>
+</html>

@@ -4,8 +4,8 @@
 // ---- Sidebar toggle for mobile ----
 document.addEventListener('DOMContentLoaded', function () {
 
-    const hamburger = document.getElementById('hamburger');
-    const sidebar   = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger') || document.getElementById('mobileRailToggle');
+    const sidebar   = document.getElementById('sidebar') || document.getElementById('sidebarRail');
     const overlay   = document.getElementById('sidebar-overlay');
 
     function openSidebar() {

@@ -335,6 +335,24 @@ body {
     flex: 1;
     width: 100%;
     align-items: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.rail-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.sidebar-rail a,
+.sidebar-rail .rail-link {
+    text-decoration: none !important;
+}
+
+.sidebar-rail a:hover,
+.sidebar-rail .rail-link:hover {
+    text-decoration: none !important;
 }
 
 .rail-link {
@@ -344,8 +362,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ded9fa;
-    text-decoration: none;
+    color: #ded9fa !important;
+    text-decoration: none !important;
     font-size: 18px;
     transition: all 0.2s ease;
     position: relative;
@@ -353,18 +371,19 @@ body {
 
 .rail-link:hover {
     background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    color: #ffffff !important;
     transform: scale(1.05);
+    text-decoration: none !important;
 }
 
 .rail-link.active {
     background: var(--navy-deep);
-    color: #ffffff;
+    color: #ffffff !important;
     box-shadow: 0 6px 18px rgba(25, 20, 50, 0.35);
 }
 
 .rail-label {
-    display: none;
+    display: none !important;
 }
 
 .rail-footer {
@@ -376,12 +395,14 @@ body {
 }
 
 .rail-logout {
-    color: #e5a4a4;
+    color: #e5a4a4 !important;
+    text-decoration: none !important;
 }
 
 .rail-logout:hover {
     background: rgba(235, 87, 87, 0.2);
-    color: #ff7675;
+    color: #ff7675 !important;
+    text-decoration: none !important;
 }
 
 /* Main Canvas */

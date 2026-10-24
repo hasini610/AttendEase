@@ -1,9 +1,18 @@
 // controllers/adminController.js
 // Admin dashboard and analytics
+// Supports both Plain HTML5 views and Express JSON API responses
 
 const db = require('../config/db');
+const path = require('path');
 
 const THRESHOLD = parseInt(process.env.ATTENDANCE_THRESHOLD || 75);
+
+// Helper: check if client expects JSON
+function wantsJson(req) {
+    return req.xhr || 
+           (req.headers.accept && req.headers.accept.includes('application/json')) ||
+           (req.originalUrl && req.originalUrl.startsWith('/api'));
+}
 
 const adminController = {
 
@@ -30,7 +39,6 @@ const adminController = {
             });
 
             // --- 3. 14-session attendance trend (% per date) ---
-            // Grabs the latest 14 distinct session dates available
             const [trendRows] = await db.query(`
                 SELECT sub.date, sub.total, sub.present_count
                 FROM (
@@ -109,10 +117,7 @@ const adminController = {
                 [req.session.user.id]
             );
 
-            res.render('admin/dashboard', {
-                title: 'Admin Dashboard - AttendEase',
-                pageTitle: 'Dashboard',
-                activePage: 'dashboard',
+            const responseData = {
                 user: req.session.user,
                 stats: {
                     totalStudents:     studentRow.c,
@@ -127,15 +132,20 @@ const adminController = {
                 deptStats,
                 lowAttendanceStudents,
                 notifCount: notifRow ? notifRow.c : 0
-            });
+            };
+
+            if (wantsJson(req)) {
+                return res.json({ success: true, ...responseData });
+            }
+
+            return res.sendFile(path.join(__dirname, '../views_html/admin/dashboard.html'));
 
         } catch (err) {
             console.error('Admin dashboard error:', err);
-            res.render('error', {
-                title: 'Server Error',
-                message: 'Could not load dashboard statistics. Please try again.',
-                user: req.session.user
-            });
+            if (wantsJson(req)) {
+                return res.status(500).json({ success: false, message: 'Could not load dashboard statistics.' });
+            }
+            return res.status(500).sendFile(path.join(__dirname, '../views_html/error.html'));
         }
     }
 };

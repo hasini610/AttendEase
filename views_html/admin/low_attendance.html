@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Attendance Report - AttendEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="aesthetic-app-body" data-active-page="low_attendance">
+
+<div class="aesthetic-layout-container">
+    <aside class="sidebar-rail" id="sidebarRail"></aside>
+
+    <div class="aesthetic-main-canvas">
+        <header class="aesthetic-topbar" id="topbarHeader" data-page-title="Low Attendance Report"></header>
+
+        <div class="aesthetic-content-area">
+            <div id="flashContainer"></div>
+
+            <!-- HERO HEADER -->
+            <div class="dashboard-hero-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div class="hero-left-titles">
+                    <h1 class="hero-main-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Low Attendance Alert
+                    </h1>
+                    <p class="hero-sub-title">Students with overall attendance below <strong id="heroThreshold">75%</strong> — requires intervention</p>
+                </div>
+                <div class="hero-action-box d-flex gap-2">
+                    <a href="/admin/reports" id="btnBackReports" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Reports
+                    </a>
+                    <a href="/admin/reports/export" id="btnExportCsv" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                        <i class="bi bi-download me-1"></i>Export CSV
+                    </a>
+                </div>
+            </div>
+
+            <!-- FILTERS -->
+            <div class="aesthetic-white-card mb-4">
+                <form id="filterForm" class="row g-3 align-items-end" onsubmit="event.preventDefault(); loadLowAttendance();">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fs-12 fw-bold text-muted">Department</label>
+                        <select id="filterDept" name="dept_id" class="form-select pill-input fs-13" onchange="loadLowAttendance()">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fs-12 fw-bold text-muted">Class / Section</label>
+                        <select id="filterClass" name="class_id" class="form-select pill-input fs-13" onchange="loadLowAttendance()">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">From</label>
+                        <input type="date" id="filterDateFrom" name="date_from" class="form-control pill-input fs-13" onchange="loadLowAttendance()">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-12 fw-bold text-muted">To</label>
+                        <input type="date" id="filterDateTo" name="date_to" class="form-control pill-input fs-13" onchange="loadLowAttendance()">
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-navy-pill w-100">
+                            <i class="bi bi-search me-1"></i>Apply
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" onclick="clearFilters()" title="Clear">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- COUNT CARD -->
+            <div class="aesthetic-white-card mb-4 p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle" style="width:50px;height:50px;background:#fff1f1;color:#d63031;font-size:22px;">
+                        <i class="bi bi-person-x-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fs-28 fw-800 text-danger" id="lowStudentsCount">0</div>
+                        <div class="text-muted fs-13" id="lowStudentsDesc">Students below 75% attendance for current view</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="aesthetic-white-card mb-4">
+                <div class="pb-3 mb-3 border-bottom-subtle">
+                    <h2 class="card-section-title mb-0">At-Risk Students</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table aesthetic-table align-middle mb-0" id="lowAttendanceTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No.</th>
+                                <th>Student Name</th>
+                                <th>Dept</th>
+                                <th>Section</th>
+                                <th class="text-center">Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th>Sessions Needed*</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowAttendanceTbody">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="spinner-border text-danger spinner-border-sm me-2" role="status"></div>
+                                    Loading at-risk students...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="sessionsNeededNote" class="mt-3 text-muted fs-12 d-none">
+                    *Sessions Needed = consecutive classes required (without any absence) to reach <span id="noteThreshold">75</span>% assuming existing sessions remain fixed.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+let currentThreshold = 75;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dept_id')) document.getElementById('filterDept').value = params.get('dept_id');
+    if (params.get('class_id')) document.getElementById('filterClass').value = params.get('class_id');
+    if (params.get('date_from')) document.getElementById('filterDateFrom').value = params.get('date_from');
+    if (params.get('date_to')) document.getElementById('filterDateTo').value = params.get('date_to');
+
+    loadLowAttendance();
+});
+
+async function loadLowAttendance() {
+    const dept_id = document.getElementById('filterDept').value;
+    const class_id = document.getElementById('filterClass').value;
+    const date_from = document.getElementById('filterDateFrom').value;
+    const date_to = document.getElementById('filterDateTo').value;
+
+    const query = new URLSearchParams();
+    if (dept_id) query.set('dept_id', dept_id);
+    if (class_id) query.set('class_id', class_id);
+    if (date_from) query.set('date_from', date_from);
+    if (date_to) query.set('date_to', date_to);
+
+    const qStr = query.toString();
+    document.getElementById('btnBackReports').href = `/admin/reports${qStr ? '?' + qStr : ''}`;
+    document.getElementById('btnExportCsv').href = `/admin/reports/export${qStr ? '?' + qStr : ''}`;
+
+    try {
+        const data = await AttendEase.apiFetch(`/api/admin/reports/low-attendance?${qStr}`);
+        currentThreshold = data.threshold || 75;
+        document.getElementById('heroThreshold').textContent = `${currentThreshold}%`;
+        document.getElementById('lowStudentsDesc').textContent = `Students below ${currentThreshold}% attendance for current view`;
+        document.getElementById('noteThreshold').textContent = currentThreshold;
+
+        populateFilterOptions(data.filterOptions || {}, data.filters || {});
+        renderTable(data.lowRows || []);
+    } catch (err) {
+        console.error('Failed to load low attendance report:', err);
+        AttendEase.showFlash('Failed to load low attendance report.', 'error');
+    }
+}
+
+function populateFilterOptions(options, selected) {
+    const depts = options.departments || [];
+    const classes = options.classes || [];
+
+    const deptSelect = document.getElementById('filterDept');
+    const classSelect = document.getElementById('filterClass');
+
+    const sDept = selected.dept_id || deptSelect.value;
+    const sClass = selected.class_id || classSelect.value;
+
+    deptSelect.innerHTML = '<option value="">All Departments</option>' +
+        depts.map(d => `<option value="${d.id}" ${String(sDept) === String(d.id) ? 'selected' : ''}>${AttendEase.escapeHtml(d.code)} – ${AttendEase.escapeHtml(d.name)}</option>`).join('');
+
+    classSelect.innerHTML = '<option value="">All Sections</option>' +
+        classes.map(c => `<option value="${c.id}" ${String(sClass) === String(c.id) ? 'selected' : ''}>${AttendEase.escapeHtml(c.dept_code || '')} – ${AttendEase.escapeHtml(c.name)}</option>`).join('');
+}
+
+function renderTable(lowRows) {
+    const tbody = document.getElementById('lowAttendanceTbody');
+    const noteEl = document.getElementById('sessionsNeededNote');
+    document.getElementById('lowStudentsCount').textContent = lowRows.length;
+
+    if (!lowRows || lowRows.length === 0) {
+        noteEl.classList.add('d-none');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-5 text-success">
+                    <i class="bi bi-check-circle-fill fs-1 d-block mb-2"></i>
+                    All students are above the ${currentThreshold}% attendance threshold for the current filter.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    noteEl.classList.remove('d-none');
+
+    tbody.innerHTML = lowRows.map((r, i) => {
+        const t = Number(r.total) || 0;
+        const a = Number(r.attended) || 0;
+        const needed = t > 0 ? Math.max(0, Math.ceil(((currentThreshold / 100) * t - a) / (1 - (currentThreshold / 100)))) : 0;
+
+        return `
+            <tr>
+                <td class="text-muted fs-12">${i + 1}</td>
+                <td><code>${AttendEase.escapeHtml(r.roll_number)}</code></td>
+                <td class="fw-bold text-dark">${AttendEase.escapeHtml(r.full_name)}</td>
+                <td><span class="badge bg-light text-dark border">${AttendEase.escapeHtml(r.dept_code)}</span></td>
+                <td>${AttendEase.escapeHtml(r.class_name)}</td>
+                <td class="text-center"><strong>${a}</strong> / ${t}</td>
+                <td style="min-width:140px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress aesthetic-progress flex-grow-1" style="height:7px;">
+                            <div class="progress-bar bg-danger" style="width:${r.pct}%"></div>
+                        </div>
+                        <span class="text-danger fw-800 fs-13">${r.pct}%</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-12 py-1">+${needed} classes</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function clearFilters() {
+    document.getElementById('filterDept').value = '';
+    document.getElementById('filterClass').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    loadLowAttendance();
+}
+</script>
+</body>
+</html>
