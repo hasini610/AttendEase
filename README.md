@@ -5,7 +5,7 @@
 
 ---
 
-## 🚀 Features
+## Features
 
 ### Admin Module
 - Dashboard with live stats: attendance rate, active sessions, low-attendance alerts
@@ -43,7 +43,7 @@
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer        | Technology                                          |
 |--------------|-----------------------------------------------------|
@@ -59,7 +59,7 @@
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js v18+
 - MySQL 8.0+
@@ -67,7 +67,7 @@
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Clone the repository
 
@@ -117,7 +117,7 @@ Open http://localhost:3000 in your browser.
 
 ---
 
-## 🔑 Demo Accounts
+## Demo Accounts
 
 | Role    | Username     | Password     | Default Email        |
 |---------|--------------|--------------|----------------------|
@@ -127,7 +127,7 @@ Open http://localhost:3000 in your browser.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 attendease/
@@ -150,7 +150,7 @@ attendease/
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ```bash
 node test_phase3_admin.js     # 66 tests
@@ -163,7 +163,7 @@ Total: 233 tests — all passing.
 
 ---
 
-## 🗄️ Database Overview
+## Database Overview
 
 | Entity             | Count  |
 |--------------------|--------|
@@ -178,14 +178,10 @@ Total: 233 tests — all passing.
 
 ---
 
-## 🔒 Security Notes
+## Security Notes
 
 - Never commit `.env` — it is in `.gitignore`
 - Change `SESSION_SECRET` before deploying
 - Set `NODE_ENV=production` for HTTPS-only secure cookies
 
 ---
-
-## 📄 License
-
-MIT License.
